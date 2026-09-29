@@ -15,9 +15,9 @@ window.CP_CONFIG = {
     appId: '1:168248619956:web:f3e1078e744512bdd538e1'
   },
   emailjs: {
-    publicKey: '',
-    serviceId: '',
-    templateId: ''
+    publicKey: '5UDl-dY9RQ6EUDu1U',
+    serviceId: 'service_ervj1qs',
+    templateId: 'template_lhvvtfp'
   },
   /* Opcional: liga al aviso de privacidad. */
   privacyUrl: ''
