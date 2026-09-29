@@ -1,9 +1,9 @@
 /* Panel del equipo de Logística. */
-import { start, configured, friendly, CFG } from '../core/firebase.js';
-import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js';
-import * as E from '../core/equipo.js';
-import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js';
-import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js';
+import { start, configured, friendly, CFG } from '../core/firebase.js?v=5';
+import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=5';
+import * as E from '../core/equipo.js?v=5';
+import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=5';
+import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=5';
 
 const root = document.getElementById('app');
 let yo = null, cache = { provs: null, correos: null };
@@ -11,7 +11,20 @@ const esAdmin = () => yo && yo.rol === 'admin';
 const fail = (e) => toast(friendly(e).message, 'bad');
 const etiquetaEstado = (s) => tag((ESTADOS[s] || {}).tag || '', (ESTADOS[s] || { l: s }).l);
 
+/* Cada celda lleva el nombre de su columna: cuando la tabla no cabe, se muestra como tarjetas sin cortar el texto. */
+function etiquetarTablas() {
+  root.querySelectorAll('table.data:not([data-lbl])').forEach((t) => {
+    t.setAttribute('data-lbl', '');
+    const cols = Array.from(t.querySelectorAll('thead th')).map((th) => th.textContent.trim());
+    const pinta = () => t.querySelectorAll('tbody tr').forEach((tr) => Array.from(tr.children).forEach((td, i) => {
+      if (!td.hasAttribute('data-label')) td.setAttribute('data-label', cols[i] || '');
+    }));
+    pinta(); new MutationObserver(pinta).observe(t, { childList: true, subtree: true });
+  });
+}
+
 async function init() {
+  new MutationObserver(etiquetarTablas).observe(root, { childList: true, subtree: true });
   mount(document.getElementById('brand'), logos('#/tablero'));
   if (!configured) return fatal(root, 'El panel aún no está conectado', 'Falta la configuración de Firebase en js/config.js.');
   window.addEventListener('hashchange', ruta);

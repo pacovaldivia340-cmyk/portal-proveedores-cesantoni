@@ -320,15 +320,35 @@ dialog.modal::backdrop { background: rgba(15, 18, 24, .55); }
 .page-head { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .page-head h1 { font-family: var(--display); font-size: 40px; letter-spacing: .3px; }
 .page-head .sub { color: var(--muted); font-size: 14px; }
-.toolbar { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr)); gap: 12px; align-items: end; }
+.toolbar { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-items: end; }
+.toolbar > :first-child { grid-column: span 2; }
+.toolbar .input { text-overflow: ellipsis; }
 .seg { display: flex; gap: 6px; flex-wrap: wrap; }
 .seg button { border: 1px solid var(--line-2); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
 .seg button b { font-family: var(--display); font-size: 16px; }
 .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
-.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); }
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); container-type: inline-size; }
 table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 table.data th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; }
 table.data td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.data td:first-child { white-space: nowrap; }
+table.data td:last-child .btn { white-space: nowrap; }
+table.data td:last-child { white-space: nowrap; }
+/* Si la tabla no cabe completa, cada fila se vuelve una tarjeta con etiquetas: nada se corta ni se amontona. */
+@container (max-width: 1100px) {
+  table.data thead { display: none; }
+  table.data, table.data tbody { display: block; }
+  table.data tr { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 20px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  table.data tbody tr:last-child { border-bottom: 0; }
+  table.data td { display: block; padding: 0; border: 0; min-width: 0; white-space: normal !important; overflow-wrap: anywhere; }
+  table.data td::before { content: attr(data-label); display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+  table.data td[data-label=""]::before { display: none; }
+  table.data td:first-child { grid-column: 1 / -1; }
+  table.data td[data-label=""] { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  table.data td[data-label=""]:empty { display: none; }
+  table.data tr.go:hover td { background: transparent; }
+  table.data tr.go:hover { background: #FAFBFC; }
+}
 table.data tbody tr:last-child td { border-bottom: 0; }
 table.data tr.go { cursor: pointer; }
 table.data tr.go:hover td { background: #FAFBFC; }

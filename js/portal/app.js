@@ -1,9 +1,9 @@
 /* Portal del proveedor. */
-import { start, configured, friendly, AppError } from '../core/firebase.js';
-import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js';
-import * as P from '../core/proveedor.js';
-import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, b64ToBlob, saveBlob, fatal } from '../core/ui.js';
-import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js';
+import { start, configured, friendly, AppError } from '../core/firebase.js?v=5';
+import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=5';
+import * as P from '../core/proveedor.js?v=5';
+import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=5';
+import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=5';
 
 const root = document.getElementById('app');
 const PASOS_UI = [...PASOS.map((p) => ({ id: p.id, t: p.titulo, s: p.sub })), { id: 'documentos', t: 'Documentos', s: 'PDF o imagen' }, { id: 'revision', t: 'Enviar', s: 'Revisa y envía' }];
