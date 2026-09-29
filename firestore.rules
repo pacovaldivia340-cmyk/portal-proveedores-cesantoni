@@ -1,0 +1,95 @@
+rules_version = '2';
+// Reglas de seguridad de la plataforma de proveedores (colecciones con prefijo pv_).
+// Pégalas en Firebase > Firestore Database > Reglas > Publicar.
+// Si el proyecto tiene otras colecciones (por ejemplo, las de la versión de Apps Script),
+// no se ven afectadas: aquí no hay reglas para ellas y el navegador no puede leerlas.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function adminDoc() { return get(/databases/$(database)/documents/pv_admins/$(request.auth.uid)); }
+    function isStaff() {
+      return signedIn() && exists(/databases/$(database)/documents/pv_admins/$(request.auth.uid)) && adminDoc().data.activo == true;
+    }
+    function isAdmin() { return isStaff() && adminDoc().data.rol == 'admin'; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function supplier(uid) { return get(/databases/$(database)/documents/pv_proveedores/$(uid)).data; }
+    function editable(uid) { return supplier(uid).estado in ['iniciado', 'correccion']; }
+    // En «corrección» solo se reemplazan documentos marcados con corrección (o requeridos que falten).
+    function canUpload(uid, tipo) {
+      let s = supplier(uid);
+      return s.estado == 'iniciado' || (s.estado == 'correccion' && (!(tipo in s.entregados) ||
+        (tipo in s.revisiones && s.revisiones[tipo].revision == 'correccion' && s.revisiones[tipo].version == s.entregados[tipo])));
+    }
+
+    // Marca de que ya existe el primer administrador (se crea una sola vez).
+    match /pv_config/bootstrap {
+      allow get: if true;
+      allow create: if signedIn() && getAfter(/databases/$(database)/documents/pv_admins/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    match /pv_admins/{uid} {
+      allow read: if isStaff() || isOwner(uid);
+      allow create: if isAdmin() ||
+        (isOwner(uid) && request.resource.data.rol == 'admin' && request.resource.data.activo == true &&
+         !exists(/databases/$(database)/documents/pv_config/bootstrap) &&
+         existsAfter(/databases/$(database)/documents/pv_config/bootstrap));
+      allow update: if isAdmin() ||
+        (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['debe_cambiar', 'ultimo_acceso']));
+    }
+
+    // Folio -> correo de acceso. Se puede consultar un folio concreto, nunca listar.
+    match /pv_folios/{folio} {
+      allow get: if true;
+      allow list: if isStaff();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /pv_proveedores/{uid} {
+      allow read: if isOwner(uid) || isStaff();
+      allow create: if isOwner(uid) && request.resource.data.estado == 'iniciado' &&
+        request.resource.data.entregados.size() == 0 && request.resource.data.revisiones.size() == 0 &&
+        request.resource.data.resultado_revision == 'pendiente';
+      allow update: if isStaff() || (isOwner(uid) &&
+        resource.data.estado in ['iniciado', 'correccion'] &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data', 'paso_actual', 'fecha_actualizacion', 'razon_social',
+          'pais', 'contacto_nombre', 'contacto_email', 'contacto_telefono', 'entregados', 'estado', 'envios', 'fecha_envio', 'fecha_ultimo_envio']) &&
+        (request.resource.data.estado == resource.data.estado || request.resource.data.estado == 'enviado'));
+
+      match /documentos/{docId} {
+        allow read: if isOwner(uid) || isStaff();
+        allow create: if isOwner(uid) && canUpload(uid, request.resource.data.tipo) &&
+          request.resource.data.revision == 'pendiente' && request.resource.data.es_actual == true && request.resource.data.supplier_id == uid;
+        allow update: if isStaff() || (isOwner(uid) && canUpload(uid, resource.data.tipo) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['es_actual']) && request.resource.data.es_actual == false);
+
+        match /partes/{n} {
+          allow read: if isOwner(uid) || isStaff();
+          allow create: if isOwner(uid) && editable(uid) && request.resource.data.d is string && request.resource.data.d.size() <= 700000;
+        }
+      }
+
+      match /eventos/{id} {
+        allow read: if isOwner(uid) || isStaff();
+        allow create: if isStaff() || (isOwner(uid) && request.resource.data.actor_tipo == 'proveedor');
+      }
+    }
+
+    // Lectura de metadatos de documentos para la pantalla Sistema (tamaño usado).
+    match /{path=**}/documentos/{docId} {
+      allow read: if isStaff();
+    }
+
+    // Bitácora de correos: cualquiera con sesión registra sus envíos; solo el personal la consulta.
+    match /pv_correos/{id} {
+      allow create: if signedIn();
+      allow read, update: if isStaff();
+    }
+
+    // Destinatarios internos de los avisos (los lee el navegador que envía el aviso).
+    match /pv_destinatarios/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
