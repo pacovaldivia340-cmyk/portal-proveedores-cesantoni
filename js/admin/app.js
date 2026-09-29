@@ -1,6 +1,6 @@
 /* Panel del equipo de Logística. */
 import { start, configured, friendly, CFG } from '../core/firebase.js';
-import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos } from '../core/catalog.js';
+import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js';
 import * as E from '../core/equipo.js';
 import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js';
 import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js';
@@ -253,15 +253,27 @@ async function listado(params) {
   pintar();
 }
 
+/* Agrupa los campos de un paso por sección (flota, forwarder, almacenes, maniobras), solo los que aplican. */
+function bloquesDatos(ps, d) {
+  const out = [{ t: null, items: [] }];
+  ps.campos.forEach((c) => {
+    if (!visible(c, d)) return;
+    if (c.t === 'sec') out.push({ t: c.l, icon: c.icon, items: [] }); else out[out.length - 1].items.push(c);
+  });
+  return out.filter((b) => b.items.length);
+}
+const EXTRA_CSV = PASOS.find((x) => x.id === 'operacion').campos.filter((c) => c.t !== 'sec' && /^(fw|alm|man)_/.test(c.k));
+
 function exportarCsv(provs) {
   const cols = ['Folio', 'Estado', 'Resultado', 'Razón social', 'Nombre comercial', 'RFC', 'País', 'Contacto', 'Puesto', 'Correo', 'Teléfono', 'Domicilio', 'Ciudad', 'Estado (domicilio)', 'CP',
     'Servicios', 'Cobertura nacional', 'Centroamérica', 'Tipos de unidad', 'Número de unidades', 'Monitoreo', 'GPS', 'Documentos entregados', 'Documentos aprobados', 'Responsable',
-    'Notas internas', 'Inicio', 'Envío', 'Actualización'];
+    'Notas internas', 'Inicio', 'Envío', 'Actualización', ...EXTRA_CSV.map((c) => (c.k.startsWith('fw_') ? 'Forwarder: ' : c.k.startsWith('alm_') ? 'Almacenes: ' : 'Maniobras: ') + c.l)];
   const cel = (v) => { let s = String(v === null || v === undefined ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
   const filas = provs.map((p) => { const d = p.datos || {}, r = E.resumenDocs(p);
     return [p.folio, (ESTADOS[p.estado] || {}).l, p.resultado, p.razon_social, d.nombre_comercial, d.rfc, p.pais, p.contacto, d.puesto, p.correo, p.telefono,
       [d.calle, d.colonia].filter(Boolean).join(', '), d.ciudad, d.estado, d.cp, lista(d.servicios), lista(d.cobertura), lista(d.centroamerica), lista(d.unidades),
-      d.num_unidades, d.monitoreo, d.gps, r.entregados + ' de ' + r.req, r.aprobados, p.responsable, p.notas, fechaHora(p.creado_en), fechaHora(p.enviado_en), fechaHora(p.actualizado_en)]; });
+      d.num_unidades, d.monitoreo, d.gps, r.entregados + ' de ' + r.req, r.aprobados, p.responsable, p.notas, fechaHora(p.creado_en), fechaHora(p.enviado_en), fechaHora(p.actualizado_en),
+      ...EXTRA_CSV.map((c) => (aplica(c, d) ? (Array.isArray(d[c.k]) ? d[c.k].join(', ') : d[c.k]) : ''))]; });
   const csv = '﻿' + [cols, ...filas].map((f) => f.map(cel).join(',')).join('\r\n');
   saveBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'Proveedores_CESANTONI_' + dia(new Date().toISOString()) + '.csv');
   toast(plural(filas.length, 'registro exportado', 'registros exportados') + '.', 'ok');
@@ -300,7 +312,8 @@ async function expediente(id) {
     if (pestana === 'documentos') return pintarDocumentos();
     if (pestana === 'resolucion') return pintarResolucion();
     if (pestana === 'datos') return mount(cuerpo, h('section', { class: 'card card-pad' }, h('div', { class: 'data-groups' }, PASOS.map((ps) =>
-      h('div', null, h('h3', null, ps.titulo), h('dl', { class: 'kv' }, ps.campos.map((c) => [h('dt', null, c.l), h('dd', null, lista((p.datos || {})[c.k]))])))))));
+      h('div', null, h('h3', null, ps.titulo), bloquesDatos(ps, p.datos || {}).map((b) => [b.t ? h('h4', { class: 'kv-sec' }, icon(b.icon || 'doc'), b.t) : null,
+        h('dl', { class: 'kv' }, b.items.map((c) => [h('dt', null, c.l), h('dd', null, lista((p.datos || {})[c.k]))]))]))))));
     if (pestana === 'historial') return mount(cuerpo, h('section', { class: 'card card-pad' }, D.hist.length ? h('ul', { class: 'timeline' }, D.hist.map((x) =>
       h('li', null, h('time', null, fechaHora(x.creado_en)), h('div', null, h('strong', null, x.texto), h('div', { class: 'cell-sub' }, (x.actor_tipo === 'equipo' ? 'Equipo: ' : 'Proveedor: ') + (x.actor || '—')))))) : h('p', { class: 'muted' }, 'Sin movimientos.')));
     return mount(cuerpo, h('section', { class: 'card card-pad' }, D.correos.length ? h('ul', { class: 'timeline' }, D.correos.map((c) =>

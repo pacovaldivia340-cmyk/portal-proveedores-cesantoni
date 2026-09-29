@@ -1,6 +1,6 @@
 /* Portal del proveedor. */
 import { start, configured, friendly, AppError } from '../core/firebase.js';
-import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar } from '../core/catalog.js';
+import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js';
 import * as P from '../core/proveedor.js';
 import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, b64ToBlob, saveBlob, fatal } from '../core/ui.js';
 import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js';
@@ -11,10 +11,12 @@ const PASO_ICON = { contacto: 'user', empresa: 'building', operacion: 'truck', d
 const TITULO_ICON = PASO_ICON;
 /* Íconos de las opciones de selección. */
 const OPC_ICON = {
-  servicios: ['truck', 'boxes', 'pin', 'globe', 'swap', 'warehouse'],
+  servicios: ['truck', 'boxes', 'pin', 'globe', 'swap', 'send', 'warehouse', 'layers'],
   unidades: ['truck', 'truck', 'layers', 'truck', 'truck', 'truck', 'layers', 'snow'],
   monitoreo: ['radar', 'clock'],
-  gps: ['sat', 'x']
+  gps: ['sat', 'x'],
+  fw_modalidades: ['globe', 'send', 'truck', 'swap', 'layers'],
+  man_horario: ['radar', 'clock', 'cal']
 };
 const DRAFT = 'cp_borrador';
 let prov = null, docs = [], errores = {}, actual = '';
@@ -180,14 +182,31 @@ function errorDe(pasoId, k) {
 const tocados = {};
 let mostrarTodo = {};
 
+function datosActuales() { return prov ? prov.datos || {} : borrador.datos; }
 function control(c, pasoId) {
+  const el = controlBase(c, pasoId);
+  if (c.si && !visible(c, datosActuales())) el.hidden = true;
+  return el;
+}
+/* Muestra u oculta flota, forwarder, almacenes y maniobras según los servicios marcados. */
+function refrescarVisibles(pasoId) {
+  const p = PASOS.find((x) => x.id === pasoId), d = datosActuales();
+  if (!p) return;
+  p.campos.forEach((c) => { if (!c.si) return; const w = document.getElementById('w-' + c.k); if (w) w.hidden = !visible(c, d); });
+}
+
+function controlBase(c, pasoId) {
+  if (c.t === 'sec') {
+    return h('div', { class: 'span-2 sec-title', id: 'w-' + c.k }, h('span', { class: 'sec-ico' }, icon(c.icon || 'doc')),
+      h('div', null, h('h2', null, c.l), c.s ? h('p', null, c.s) : null));
+  }
   const v = valor(c.k), e = errorDe(pasoId, c.k), ver = e && (mostrarTodo[pasoId] || tocados[c.k]);
   const err = h('p', { class: 'err', id: 'e-' + c.k, hidden: !ver }, ver ? e : '');
   const help = c.help ? h('p', { class: 'help', id: 'h-' + c.k }, c.help) : null;
   const req = c.req ? h('span', { class: 'req', 'aria-hidden': 'true' }, '*') : null;
   const desc = [c.help ? 'h-' + c.k : '', 'e-' + c.k].filter(Boolean).join(' ');
   if (c.t === 'multi' || c.t === 'radio') {
-    const tipo = c.k === 'servicios' ? 'tiles-lg' : c.k === 'cobertura' || c.k === 'centroamerica' ? 'tiles-sm' : 'tiles-md';
+    const tipo = c.k === 'servicios' ? 'tiles-lg' : ['cobertura', 'centroamerica', 'fw_aduanas'].includes(c.k) ? 'tiles-sm' : 'tiles-md';
     const grupo = h('div', { class: 'tiles ' + tipo + (c.t === 'radio' ? ' is-radio' : '') });
     const cuenta = c.t === 'multi' ? h('span', { class: 'count' }) : null;
     const contar = () => { if (!cuenta) return; const n = grupo.querySelectorAll('input:checked').length; cuenta.textContent = n ? n + (n === 1 ? ' seleccionado' : ' seleccionados') : ''; };
@@ -243,6 +262,7 @@ function pintarErrores(pasoId) {
 }
 
 function cambiar(k, v, pasoId) {
+  if (k === 'servicios') setTimeout(() => refrescarVisibles(pasoId), 0);
   if (!prov) {
     borrador.datos[k] = v;
     if (borrador.errores) delete borrador.errores[k];
@@ -416,7 +436,7 @@ function resumen(pasoId, editar) {
   return h('section', { class: 'card card-pad' },
     h('div', { class: 'row', style: { marginBottom: '12px' } }, h('h2', { style: { fontSize: '16px' } }, p.titulo), h('span', { class: 'spacer' }),
       editar ? h('button', { type: 'button', class: 'link', onclick: () => ir(pasoId) }, 'Editar') : null),
-    h('dl', { class: 'kv' }, p.campos.filter((c) => c.req || (d[c.k] !== undefined && d[c.k] !== '' && !(Array.isArray(d[c.k]) && !d[c.k].length)))
+    h('dl', { class: 'kv' }, p.campos.filter((c) => aplica(c, d)).filter((c) => c.req ||(d[c.k] !== undefined && d[c.k] !== '' && !(Array.isArray(d[c.k]) && !d[c.k].length)))
       .map((c) => [h('dt', null, c.l), h('dd', null, lista(d[c.k]))])));
 }
 

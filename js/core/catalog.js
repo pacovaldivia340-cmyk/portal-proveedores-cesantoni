@@ -11,7 +11,13 @@ export const ESTADOS_MX = ['Aguascalientes', 'Baja California', 'Baja California
   'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala',
   'Veracruz', 'Yucatán', 'Zacatecas'];
 export const SERVICIOS = ['Transporte nacional (carga completa)', 'Carga consolidada', 'Última milla y reparto local', 'Transporte a Centroamérica',
-  'Importación y exportación', 'Logística operativa (maniobras y almacenaje)'];
+  'Importación y exportación', 'Forwarder (agente de carga internacional)', 'Almacenes y bodegas', 'Maniobras de carga y descarga'];
+export const SRV = { forwarder: SERVICIOS[5], almacen: SERVICIOS[6], maniobras: SERVICIOS[7] };
+const TRANSPORTE = SERVICIOS.slice(0, 5);
+const tiene = (d, s) => (d.servicios || []).includes(s);
+/* Los datos de unidades se piden si aún no elige servicios o si ofrece transporte. */
+const conTransporte = (d) => !(d.servicios || []).length || (d.servicios || []).some((s) => TRANSPORTE.includes(s));
+const esForwarder = (d) => tiene(d, SRV.forwarder), conAlmacen = (d) => tiene(d, SRV.almacen), conManiobras = (d) => tiene(d, SRV.maniobras);
 export const UNIDADES = ["Caja seca 53'", "Caja seca 48'", 'Full (doble remolque)', 'Torton', 'Rabón', 'Camioneta 3.5 t', 'Plataforma', 'Refrigerado'];
 
 export const PASOS = [
@@ -36,15 +42,53 @@ export const PASOS = [
     { k: 'ops_telefono', l: 'Teléfono de operaciones', t: 'tel' },
     { k: 'ops_correo', l: 'Correo de operaciones', t: 'email' }] },
   { id: 'operacion', titulo: 'Operación', sub: 'Servicios y cobertura', intro: 'Qué servicios ofreces, dónde operas y cómo monitoreas tus unidades.', campos: [
-    { k: 'servicios', l: 'Tipo de servicio', t: 'multi', req: true, op: SERVICIOS },
+    { k: 'servicios', l: 'Tipo de servicio', t: 'multi', req: true, op: SERVICIOS, help: 'Marca todos los que ofreces. Según lo que elijas te pediremos los datos de flota, forwarder, almacenes o maniobras.' },
     { k: 'cobertura', l: 'Cobertura nacional', t: 'multi', req: true, op: [TODA, ...ESTADOS_MX], help: 'Marca «Toda la República» o los estados donde operas.' },
     { k: 'centroamerica', l: 'Cobertura en Centroamérica', t: 'multi', op: CENTROAMERICA, help: 'Déjalo vacío si operas solo en México. Si marcas algún país se pedirá el permiso internacional.' },
-    { k: 'unidades', l: 'Tipos de unidad', t: 'multi', req: true, op: UNIDADES },
-    { k: 'num_unidades', l: 'Número de unidades', t: 'number', req: true, min: 1, max: 100000 },
-    { k: 'monitoreo', l: 'Monitoreo de unidades', t: 'radio', req: true, op: ['24/7', 'Intermitente'] },
-    { k: 'gps', l: '¿Tus unidades tienen GPS?', t: 'radio', req: true, op: ['Sí', 'No'] }] }
+    { k: 'sec_transporte', t: 'sec', l: 'Flota y monitoreo', s: 'Unidades de transporte', icon: 'truck', si: conTransporte },
+    { k: 'unidades', l: 'Tipos de unidad', t: 'multi', req: true, op: UNIDADES, si: conTransporte },
+    { k: 'num_unidades', l: 'Número de unidades', t: 'number', req: true, min: 1, max: 100000, si: conTransporte },
+    { k: 'monitoreo', l: 'Monitoreo de unidades', t: 'radio', req: true, op: ['24/7', 'Intermitente'], si: conTransporte },
+    { k: 'gps', l: '¿Tus unidades tienen GPS?', t: 'radio', req: true, op: ['Sí', 'No'], si: conTransporte },
+
+    { k: 'sec_forwarder', t: 'sec', l: 'Forwarder', s: 'Agente de carga internacional', icon: 'globe', si: esForwarder },
+    { k: 'fw_modalidades', l: 'Modalidades', t: 'multi', req: true, op: ['Marítimo', 'Aéreo', 'Terrestre', 'Ferroviario', 'Multimodal'], si: esForwarder },
+    { k: 'fw_servicios', l: 'Servicios de forwarder', t: 'multi', req: true, si: esForwarder,
+      op: ['Contenedor completo (FCL)', 'Carga consolidada (LCL)', 'Carga aérea', 'Despacho aduanal (con agente aliado)', 'Cruce fronterizo (transfer)',
+        'Seguro de carga', 'Almacén fiscal / recinto fiscalizado', 'Carga de proyecto o sobredimensionada'] },
+    { k: 'fw_aduanas', l: 'Puertos y aduanas donde operas', t: 'multi', req: true, si: esForwarder,
+      op: ['Manzanillo', 'Lázaro Cárdenas', 'Veracruz', 'Altamira', 'Ensenada', 'Nuevo Laredo', 'Ciudad Juárez', 'Tijuana', 'Colombia (N. L.)',
+        'Piedras Negras', 'AICM (Ciudad de México)', 'AIFA', 'Guadalajara', 'Monterrey', 'Querétaro', 'Ciudad Hidalgo (frontera sur)'] },
+    { k: 'fw_paises', l: 'Principales países de origen y destino', t: 'text', max: 300, wide: true, si: esForwarder, help: 'Ejemplo: China, Estados Unidos, España, Guatemala.' },
+    { k: 'fw_agente', l: 'Agente aduanal y patente', t: 'text', max: 200, si: esForwarder, help: 'Con quién despachas o tu patente propia.' },
+    { k: 'fw_afiliaciones', l: 'Registros y afiliaciones', t: 'text', max: 200, si: esForwarder, help: 'IATA, FIATA, CAAAREM, OEA, C-TPAT, etc.' },
+
+    { k: 'sec_almacen', t: 'sec', l: 'Almacenes y bodegas', s: 'Instalaciones de almacenaje', icon: 'warehouse', si: conAlmacen },
+    { k: 'alm_ubicaciones', l: 'Ubicación de almacenes y bodegas', t: 'text', req: true, max: 400, wide: true, si: conAlmacen, help: 'Ciudad y estado de cada almacén o bodega.' },
+    { k: 'alm_num', l: 'Número de almacenes o bodegas', t: 'number', req: true, min: 1, max: 1000, si: conAlmacen },
+    { k: 'alm_m2', l: 'Superficie total (m²)', t: 'number', req: true, min: 1, max: 10000000, si: conAlmacen },
+    { k: 'alm_tipo', l: 'Tipo de almacenaje', t: 'multi', req: true, si: conAlmacen,
+      op: ['Carga seca', 'Refrigerado', 'Congelado', 'Recinto fiscalizado', 'Mercancía peligrosa', 'Patio de contenedores', 'Piso (a granel)', 'Racks'] },
+    { k: 'alm_posiciones', l: 'Posiciones de tarima (rack)', t: 'number', min: 0, max: 10000000, si: conAlmacen },
+    { k: 'alm_andenes', l: 'Andenes o rampas de carga', t: 'number', min: 0, max: 10000, si: conAlmacen },
+    { k: 'alm_seguridad', l: 'Seguridad y control', t: 'multi', si: conAlmacen,
+      op: ['Vigilancia 24/7', 'Circuito cerrado (CCTV)', 'Control de acceso', 'Sistema contra incendio', 'Seguro de mercancía', 'Sistema de inventarios (WMS)'] },
+    { k: 'alm_certificaciones', l: 'Certificaciones', t: 'text', max: 200, si: conAlmacen, help: 'OEA, C-TPAT, ISO 9001, etc.' },
+    { k: 'alm_horario', l: 'Horario de recepción', t: 'text', max: 120, si: conAlmacen, help: 'Ejemplo: lunes a sábado de 7:00 a 19:00.' },
+
+    { k: 'sec_maniobras', t: 'sec', l: 'Maniobras', s: 'Carga, descarga y manejo de mercancía', icon: 'boxes', si: conManiobras },
+    { k: 'man_tipos', l: 'Tipos de maniobra', t: 'multi', req: true, si: conManiobras,
+      op: ['Carga y descarga', 'Estiba y desestiba', 'Cross-docking', 'Consolidación y desconsolidación', 'Etiquetado y empaque', 'Emplayado', 'Maniobras en patio', 'Carga sobredimensionada'] },
+    { k: 'man_equipo', l: 'Equipo disponible', t: 'multi', req: true, si: conManiobras,
+      op: ['Montacargas', 'Patín hidráulico', 'Grúa', 'Rampa niveladora', 'Tractocamión de patio', 'Emplayadora', 'Bandas transportadoras'] },
+    { k: 'man_personal', l: 'Personal de maniobras', t: 'number', req: true, min: 1, max: 100000, si: conManiobras },
+    { k: 'man_horario', l: 'Disponibilidad', t: 'radio', req: true, op: ['24/7', 'Horario diurno', 'Por cita'], si: conManiobras },
+    { k: 'man_ubicaciones', l: 'Dónde realizas maniobras', t: 'text', max: 300, wide: true, si: conManiobras, help: 'Tus instalaciones, las del cliente, puertos, etc.' }] }
 ];
-export const CAMPOS = Object.fromEntries(PASOS.flatMap((p) => p.campos.map((c) => [c.k, c])));
+export const CAMPOS = Object.fromEntries(PASOS.flatMap((p) => p.campos.filter((c) => c.t !== 'sec').map((c) => [c.k, c])));
+/* ¿El campo aplica a este registro? Flota, forwarder, almacenes y maniobras dependen de los servicios elegidos. */
+export const visible = (c, d) => !c.si || c.si(d || {});
+export const aplica = (c, d) => c.t !== 'sec' && visible(c, d);
 
 export const DOCS = [
   { k: 'constancia', l: 'Constancia de situación fiscal', regla: 'antiguedad', help: 'Emitida en los últimos 3 meses.' },
@@ -93,6 +137,7 @@ export function validar(datos) {
   PASOS.forEach((p) => {
     const e = {};
     p.campos.forEach((c) => {
+      if (!aplica(c, datos)) return;
       const v = datos[c.k];
       const vacio = v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
       const dig = String(v || '').replace(/\D/g, '').length;

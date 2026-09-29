@@ -295,6 +295,17 @@ dialog.modal::backdrop { background: rgba(15, 18, 24, .55); }
 .kv { display: grid; grid-template-columns: minmax(140px, 36%) 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; font-weight: 600; word-break: break-word; }
+.kv-sec { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .8px; color: var(--accent-600); }
+.kv-sec svg { width: 16px; height: 16px; }
+/* Títulos de sección dentro de un paso (flota, forwarder, almacenes, maniobras) */
+.sec-title { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: var(--navy); color: #fff; }
+.sec-title[hidden] { display: none; }
+.sec-ico { flex: none; width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; background: var(--accent); color: #fff; }
+.sec-ico svg { width: 22px; height: 22px; }
+.sec-title h2 { margin: 0; font-family: var(--display); font-size: 22px; letter-spacing: .4px; font-weight: 700; }
+.sec-title p { margin: 2px 0 0; font-size: 12.5px; color: #C9D2DE; }
+.field[hidden], fieldset.field[hidden] { display: none; }
 
 /* ------------------------------------------------------------ panel */
 .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: calc(100vh - 77px); }
