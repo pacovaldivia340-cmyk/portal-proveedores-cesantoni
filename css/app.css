@@ -1,18 +1,15 @@
-/* Tipografías locales (sin CDN): Antonio para títulos y Montserrat para textos. */
-@font-face { font-family: "Antonio"; font-weight: 400; font-style: normal; font-display: swap;
-  src: url("../fonts/antonio-latin-400-normal.woff2") format("woff2"); }
-@font-face { font-family: "Antonio"; font-weight: 600; font-style: normal; font-display: swap;
-  src: url("../fonts/antonio-latin-600-normal.woff2") format("woff2"); }
-@font-face { font-family: "Antonio"; font-weight: 700; font-style: normal; font-display: swap;
-  src: url("../fonts/antonio-latin-700-normal.woff2") format("woff2"); }
+/* Tipografías institucionales de CESANTONI (paquete Fonts_Cesantoni), convertidas a woff2 con los
+   caracteres latinos y del español. Antonio (variable 100–700) para títulos y Montserrat para textos. */
+@font-face { font-family: "Antonio"; font-weight: 100 700; font-style: normal; font-display: swap;
+  src: url("../fonts/antonio-variable.woff2") format("woff2"); }
 @font-face { font-family: "Montserrat"; font-weight: 400; font-style: normal; font-display: swap;
-  src: url("../fonts/montserrat-latin-400-normal.woff2") format("woff2"); }
+  src: url("../fonts/montserrat-400.woff2") format("woff2"); }
 @font-face { font-family: "Montserrat"; font-weight: 500; font-style: normal; font-display: swap;
-  src: url("../fonts/montserrat-latin-500-normal.woff2") format("woff2"); }
+  src: url("../fonts/montserrat-500.woff2") format("woff2"); }
 @font-face { font-family: "Montserrat"; font-weight: 600; font-style: normal; font-display: swap;
-  src: url("../fonts/montserrat-latin-600-normal.woff2") format("woff2"); }
+  src: url("../fonts/montserrat-600.woff2") format("woff2"); }
 @font-face { font-family: "Montserrat"; font-weight: 700; font-style: normal; font-display: swap;
-  src: url("../fonts/montserrat-latin-700-normal.woff2") format("woff2"); }
+  src: url("../fonts/montserrat-700.woff2") format("woff2"); }
 
 /* Plataforma de proveedores CESANTONI | Somos Logística.
    Antonio (títulos) y Montserrat (textos) se cargan por HTTPS con alternativas locales seguras. */
