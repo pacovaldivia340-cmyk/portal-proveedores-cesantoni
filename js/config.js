@@ -17,7 +17,7 @@ window.CP_CONFIG = {
   /* Correos por Gmail (Apps Script «Correo proveedores CESANTONI», carpeta apps-script-correo). Pega aquí la URL /exec
      de la implementación. Si queda vacío o falla, se usa EmailJS. */
   correo: {
-    url: ''
+    url: 'https://script.google.com/macros/s/AKfycbzIjutgV76q8gL34F703HGtKqR3R-__72mTPlFMPqSMmBPd7xGSj-y2osD7-XpRLf_Qqg/exec'
   },
   emailjs: {
     publicKey: '5UDl-dY9RQ6EUDu1U',

@@ -1,9 +1,9 @@
 /* Panel del equipo de Logística. */
-import { start, configured, friendly, CFG } from '../core/firebase.js?v=9';
-import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=9';
-import * as E from '../core/equipo.js?v=9';
-import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=9';
-import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=9';
+import { start, configured, friendly, CFG } from '../core/firebase.js?v=10';
+import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=10';
+import * as E from '../core/equipo.js?v=10';
+import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=10';
+import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=10';
 
 const root = document.getElementById('app');
 let yo = null, cache = { provs: null, correos: null };
