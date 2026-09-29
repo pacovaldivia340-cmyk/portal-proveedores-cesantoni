@@ -7,10 +7,12 @@
                 Account > General (Public Key).  */
 window.CP_CONFIG = {
   firebase: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    appId: ''
+    apiKey: 'AIzaSyAb2NEHLxzpW_MmuUavbYnALxjueL1aI84',
+    authDomain: 'proveedores-cesantoni.firebaseapp.com',
+    projectId: 'proveedores-cesantoni',
+    storageBucket: 'proveedores-cesantoni.firebasestorage.app',
+    messagingSenderId: '168248619956',
+    appId: '1:168248619956:web:f3e1078e744512bdd538e1'
   },
   emailjs: {
     publicKey: '',
