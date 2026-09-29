@@ -10,15 +10,15 @@ Página independiente, sin servidor propio y sin Google Apps Script:
 | Correos de avisos | EmailJS (200 correos al mes) |
 | Recuperación de clave / contraseña | Correo de Firebase Authentication |
 
-Portal: `https://pacovaldivia340-cmyk.github.io/portal-proveedores-cesantoni/`
-Panel: `https://pacovaldivia340-cmyk.github.io/portal-proveedores-cesantoni/admin.html`
+Portal: `https://proveedores-cesantoni.github.io/`
+Panel: `https://proveedores-cesantoni.github.io/admin.html`
 
 Las colecciones usan el prefijo `pv_`, así que no tocan los datos de la versión de Apps Script.
 
 ## Puesta en marcha (una sola vez)
 
 1. **Authentication**: consola de Firebase > Authentication > Comenzar > Correo electrónico/contraseña > Habilitar.
-   En *Configuración > Dominios autorizados* agrega `pacovaldivia340-cmyk.github.io`.
+   En *Configuración > Dominios autorizados* agrega `proveedores-cesantoni.github.io`.
    En *Plantillas*, cambia el idioma a Español.
 2. **Firestore**: Firestore Database > Reglas > pega `firestore.rules` > Publicar.
 3. **App web**: Configuración del proyecto > Tus apps > `</>` (Web) > registra la app y copia
@@ -27,7 +27,7 @@ Las colecciones usan el prefijo `pv_`, así que no tocan los datos de la versió
    - Email Services > Add > Gmail > conecta el correo que enviará los avisos → anota el *Service ID*.
    - Email Templates > Create: *To Email* `{{to_email}}`, *Subject* `{{subject}}`, *From name*
      `CESANTONI Somos Logística`, y en el contenido (botón «Edit Content» > «Code») escribe `{{{html}}}` → anota el *Template ID*.
-   - Account > General: *Public Key*. Account > Security: agrega el dominio `pacovaldivia340-cmyk.github.io` en *Allowed origins*.
+   - Account > General: *Public Key*. Account > Security: agrega el dominio `proveedores-cesantoni.github.io` en *Allowed origins*.
    - Copia los tres valores en `js/config.js`.
 5. **Primer administrador**: abre el panel; la primera vez pide crear la cuenta del administrador principal.
 6. **Destinatarios**: en *Panel > Destinatarios* agrega los correos del equipo que recibirán las alertas internas.
@@ -65,4 +65,4 @@ destinatarios y correos. Hazlo periódicamente.
 ## Pruebas
 
 `tests/web/e2e.mjs` (en el repositorio privado) recorre portal y panel con el emulador oficial de Firebase
-y las mismas reglas de seguridad: 29 de 29 verificaciones correctas.
+y las mismas reglas de seguridad: 30 de 30 verificaciones correctas.

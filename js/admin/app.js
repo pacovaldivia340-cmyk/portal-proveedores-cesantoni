@@ -1,9 +1,9 @@
 /* Panel del equipo de Logística. */
-import { start, configured, friendly, CFG } from '../core/firebase.js?v=7';
-import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=7';
-import * as E from '../core/equipo.js?v=7';
-import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=7';
-import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=7';
+import { start, configured, friendly, CFG } from '../core/firebase.js?v=8';
+import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=8';
+import * as E from '../core/equipo.js?v=8';
+import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=8';
+import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=8';
 
 const root = document.getElementById('app');
 let yo = null, cache = { provs: null, correos: null };
@@ -232,7 +232,7 @@ async function listado(params) {
     if (!r.length) { mount(cont, h('div', { class: 'card empty' }, h('h2', null, provs.length ? 'Sin resultados' : 'Aún no hay registros'), h('p', null, provs.length ? 'Ajusta los filtros.' : 'Aparecerán aquí en cuanto un proveedor genere su folio.'))); return; }
     mount(cont, h('p', { class: 'small muted', role: 'status', id: 'conteo' }, plural(r.length, 'registro', 'registros')),
       h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
-        h('thead', null, h('tr', null, ['Folio', 'Empresa', 'Estado', 'Documentos', 'Contacto', 'Cobertura', 'Responsable', 'Actualizado'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('thead', null, h('tr', null, ['Folio', 'Empresa', 'Estado', 'Documentos', 'Contacto', 'Cobertura', 'Responsable', 'Actualizado', ...(esAdmin() ? [''] : [])].map((t) => h('th', { scope: 'col' }, t)))),
         h('tbody', null, vista.map((p) => {
           const rd = E.resumenDocs(p), d = p.datos || {};
           const tr = h('tr', { class: 'go', tabindex: '0' },
@@ -245,9 +245,10 @@ async function listado(params) {
             h('td', null, p.pais, h('div', { class: 'cell-sub' }, (d.cobertura || [])[0] === TODA ? 'Toda la República' : plural((d.cobertura || []).length, 'estado', 'estados')),
               (d.centroamerica || []).length ? h('div', { class: 'cell-sub' }, 'CA: ' + d.centroamerica.join(', ')) : null),
             h('td', null, p.responsable || h('span', { class: 'muted' }, 'Sin asignar')),
-            h('td', null, fecha(p.actualizado_en)));
+            h('td', null, fecha(p.actualizado_en)),
+            esAdmin() ? h('td', null, botonBorrarProveedor(p, () => ruta())) : null);
           const abrir = () => { location.hash = '#/proveedor/' + p.id; };
-          tr.addEventListener('click', (ev) => { if (!ev.target.closest('a')) abrir(); });
+          tr.addEventListener('click', (ev) => { if (!ev.target.closest('a, button')) abrir(); });
           tr.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') abrir(); });
           return tr;
         })))),
@@ -292,6 +293,30 @@ function exportarCsv(provs) {
   toast(plural(filas.length, 'registro exportado', 'registros exportados') + '.', 'ok');
 }
 
+/* Borrar un registro completo (solo administradores): pide escribir el folio para confirmar. */
+function botonBorrarProveedor(p, despues, conTexto) {
+  return h('button', { type: 'button', class: 'btn btn-bad' + (conTexto ? '' : ' btn-sm btn-icon'), title: 'Borrar proveedor', 'aria-label': 'Borrar proveedor ' + p.folio,
+    onclick: (ev) => { ev.stopPropagation(); confirmarBorrado(p, despues); } }, icon('trash'), conTexto ? 'Borrar proveedor' : null);
+}
+function confirmarBorrado(p, despues) {
+  const inp = h('input', { class: 'input', id: 'del-folio', autocomplete: 'off', placeholder: p.folio });
+  const err = h('p', { class: 'err', hidden: true }, 'El folio no coincide.');
+  const cancelar = h('button', { type: 'button', class: 'btn' }, 'Cancelar');
+  const borrar = h('button', { type: 'button', class: 'btn btn-bad', id: 'del-ok' }, icon('trash'), 'Borrar definitivamente');
+  const m = modal({ title: 'Borrar proveedor', body: [
+    h('div', { class: 'note note-bad' }, h('h3', null, p.razon_social || p.folio),
+      h('p', null, 'Se borran para siempre su registro, documentos, historial y correos. El folio ' + p.folio + ' dejará de funcionar. No se puede deshacer.')),
+    h('p', { class: 'small muted' }, 'Si necesitas conservarlo, descarga antes el respaldo en Sistema o el CSV.'),
+    field('Escribe el folio para confirmar', inp), err], actions: [cancelar, borrar] });
+  cancelar.addEventListener('click', m.close);
+  borrar.addEventListener('click', async () => {
+    if (inp.value.trim().toUpperCase() !== p.folio) { err.hidden = false; inp.focus(); return; }
+    busy(borrar, true, 'Borrando…');
+    try { await E.borrarProveedor(p); m.close(); toast('Proveedor ' + p.folio + ' borrado.', 'ok'); despues(); }
+    catch (e) { busy(borrar, false); fail(e); }
+  });
+}
+
 /* ------------------------------------------------------------ expediente */
 async function expediente(id) {
   shell('proveedores');
@@ -311,7 +336,8 @@ async function expediente(id) {
         rd.correccion ? tag('warn', rd.correccion + ' en corrección') : null)),
       h('div', { class: 'row' }, D.docs.some((d) => d.vigente && d.revision === 'correccion' && d.notificada === false)
         ? h('button', { type: 'button', class: 'btn btn-primary', onclick: async (ev) => { busy(ev.currentTarget, true, 'Avisando…'); try { const n = await E.notificar(p); toast('Aviso enviado (' + plural(n, 'corrección', 'correcciones') + ').', 'ok'); expediente(id); } catch (e) { busy(ev.currentTarget, false); fail(e); } } }, 'Avisar correcciones al proveedor') : null,
-        h('button', { type: 'button', class: 'btn', onclick: () => exportarCsv([p]) }, 'CSV'))),
+        h('button', { type: 'button', class: 'btn', onclick: () => exportarCsv([p]) }, 'CSV'),
+        esAdmin() ? botonBorrarProveedor(p, () => { location.hash = '#/proveedores'; }, true) : null)),
       h('dl', { class: 'facts' },
         [['Contacto', [p.contacto, dd.puesto].filter(Boolean).join(' · ')], ['Correo', p.correo], ['Teléfono', p.telefono], ['País', p.pais],
           ['Inicio', fechaHora(p.creado_en)], ['Envío', p.enviado_en ? fechaHora(p.enviado_en) + (p.envios > 1 ? ' (envío ' + p.envios + ')' : '') : 'Sin enviar'],
@@ -462,7 +488,13 @@ async function vistaCorreos() {
         h('td', null, c.proveedor_id ? h('a', { class: 'folio', href: '#/proveedor/' + c.proveedor_id }, c.folio) : '—'), h('td', null, c.para || '—'), h('td', null, c.asunto),
         h('td', null, tag(c.estado === 'enviado' ? 'ok' : 'bad', c.estado === 'enviado' ? 'Enviado' : 'Error'), c.error ? h('div', { class: 'cell-sub' }, c.error.slice(0, 90)) : null),
         h('td', { style: { whiteSpace: 'nowrap' } }, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => previa(c) }, 'Ver'), ' ',
-          c.estado === 'error' ? h('button', { type: 'button', class: 'btn btn-sm', onclick: async (ev) => { busy(ev.currentTarget, true, '…'); try { const n = await E.reintentar(c); toast(n.estado === 'enviado' ? 'Correo enviado.' : 'Sigue sin enviarse: ' + n.error, n.estado === 'enviado' ? 'ok' : 'bad'); todos = await E.correos(); pintar(); } catch (e) { fail(e); } } }, 'Reintentar') : null)))))));
+          c.estado === 'error' ? h('button', { type: 'button', class: 'btn btn-sm', onclick: async (ev) => { busy(ev.currentTarget, true, '…'); try { const n = await E.reintentar(c); toast(n.estado === 'enviado' ? 'Correo enviado.' : 'Sigue sin enviarse: ' + n.error, n.estado === 'enviado' ? 'ok' : 'bad'); todos = await E.correos(); pintar(); } catch (e) { fail(e); } } }, 'Reintentar') : null, ' ',
+          c.estado !== 'enviado' && esAdmin() ? h('button', { type: 'button', class: 'btn btn-sm btn-bad btn-icon', title: 'Borrar correo no enviado', 'aria-label': 'Borrar correo no enviado: ' + c.asunto,
+            onclick: async (ev) => {
+              if (!confirm('¿Borrar este correo no enviado?\n\n' + c.asunto + '\n\nSe quita de la bitácora y ya no se podrá reintentar.')) return;
+              busy(ev.currentTarget, true, '…');
+              try { await E.borrarCorreo(c); toast('Correo borrado.', 'ok'); todos = await E.correos(); pintar(); } catch (e) { busy(ev.currentTarget, false); fail(e); }
+            } }, icon('trash')) : null)))))));
   };
   [estado, tipo].forEach((x) => x.addEventListener('change', pintar));
   q.addEventListener('input', debounce(pintar, 250));

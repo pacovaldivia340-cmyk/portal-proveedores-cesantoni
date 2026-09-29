@@ -54,7 +54,8 @@ const PATHS = {
   radar: 'M12 12l6-6M12 21a9 9 0 110-18M12 17a5 5 0 110-10M12 12h.01',
   sat: 'M12 12a2 2 0 100-4 2 2 0 000 4zm0 0v9M7.8 5.8a6 6 0 000 8.4M16.2 5.8a6 6 0 010 8.4M5 3a10 10 0 000 14M19 3a10 10 0 010 14',
   building: 'M4 21V4h11v17M15 9h5v12M8 8h3M8 12h3M8 16h3M2 21h20',
-  x: 'M6 6l12 12M18 6L6 18'
+  x: 'M6 6l12 12M18 6L6 18',
+  trash: 'M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3'
 };
 export function icon(name) {
   const ns = 'http://www.w3.org/2000/svg';

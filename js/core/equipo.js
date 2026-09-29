@@ -1,8 +1,8 @@
 /* Operaciones del equipo interno (panel). Las reglas de Firestore limitan todo al personal activo. */
-import { fb, auth, db, CFG, COL, ref, col, getOne, getAll, where, now, newId, emulate, portalUrl, panelUrl, AppError } from './firebase.js?v=7';
-import { DOCS, ESTADOS, REVISION, ALERTAS, docLabel, requeridos, emailOk } from './catalog.js?v=7';
-import { enviar as enviarCorreo, reintentar as reintentarCorreo } from './mail.js?v=7';
-import { diasDesde, diasHasta } from './ui.js?v=7';
+import { fb, auth, db, CFG, COL, ref, col, getOne, getAll, where, now, newId, emulate, portalUrl, panelUrl, AppError } from './firebase.js?v=8';
+import { DOCS, ESTADOS, REVISION, ALERTAS, docLabel, requeridos, emailOk } from './catalog.js?v=8';
+import { enviar as enviarCorreo, reintentar as reintentarCorreo } from './mail.js?v=8';
+import { diasDesde, diasHasta } from './ui.js?v=8';
 
 const claveOk = (p) => String(p).length >= 10 && /[A-Za-z]/.test(p) && /\d/.test(p);
 const CLAVE_MSG = 'La contraseña debe tener al menos 10 caracteres, con letras y números.';
@@ -223,6 +223,32 @@ export async function guardarDestinatario(id, { nombre, correo, avisos, activo }
     activo: activo !== false, creado_en: (prev && prev.creado_en) || now() });
 }
 export const borrarDestinatario = (id) => fb.deleteDoc(ref(COL.dest, id));
+
+/* Borrado definitivo (solo administradores): documentos con sus partes, historial, correos, folio y registro. */
+async function borrarEnLotes(refs) {
+  for (let i = 0; i < refs.length; i += 400) {
+    const b = fb.writeBatch(db);
+    refs.slice(i, i + 400).forEach((r) => b.delete(r));
+    await b.commit();
+  }
+}
+export async function borrarProveedor(p) {
+  const refs = [];
+  for (const d of await getAll(col(COL.prov, p.id, 'documentos'))) {
+    const partes = await getAll(col(COL.prov, p.id, 'documentos', d.id, 'partes'));
+    partes.forEach((x) => refs.push(ref(COL.prov, p.id, 'documentos', d.id, 'partes', x.id)));
+    refs.push(ref(COL.prov, p.id, 'documentos', d.id));
+  }
+  (await getAll(col(COL.prov, p.id, 'historial'))).forEach((x) => refs.push(ref(COL.prov, p.id, 'historial', x.id)));
+  (await getAll(where(COL.correos, 'proveedor_id', p.id))).forEach((x) => refs.push(ref(COL.correos, x.id)));
+  await borrarEnLotes(refs);
+  // Al final el folio y el registro: si algo falla antes, el expediente sigue visible y se puede reintentar.
+  await borrarEnLotes([ref(COL.folios, p.folio), ref(COL.prov, p.id)]);
+}
+export async function borrarCorreo(c) {
+  if (c.estado === 'enviado') throw new AppError('Solo se pueden borrar correos que no se enviaron.', 409);
+  await fb.deleteDoc(ref(COL.correos, c.id));
+}
 
 export async function usuarios() { return (await getAll(col(COL.admins))).sort((a, b) => a.nombre.localeCompare(b.nombre)); }
 export async function crearUsuario({ nombre, correo, rol, clave }) {

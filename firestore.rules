@@ -40,6 +40,7 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isStaff();
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAdmin();
     }
 
     match /pv_proveedores/{uid} {
@@ -50,6 +51,8 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['datos', 'paso', 'actualizado_en', 'razon_social', 'pais',
           'contacto', 'correo', 'telefono', 'entregados', 'estado', 'envios', 'enviado_en', 'reenviado_en']) &&
         (request.resource.data.estado == resource.data.estado || request.resource.data.estado == 'enviado'));
+      // Solo un administrador puede borrar un registro completo (con sus documentos e historial).
+      allow delete: if isAdmin();
 
       match /documentos/{docId} {
         allow read: if isOwner(uid) || isStaff();
@@ -57,16 +60,19 @@ service cloud.firestore {
           request.resource.data.revision == 'pendiente' && request.resource.data.vigente == true;
         allow update: if isStaff() || (isOwner(uid) && canUpload(uid, resource.data.tipo) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vigente']) && request.resource.data.vigente == false);
+        allow delete: if isAdmin();
 
         match /partes/{n} {
           allow read: if isOwner(uid) || isStaff();
           allow create: if isOwner(uid) && editable(uid) && request.resource.data.d is string && request.resource.data.d.size() <= 700000;
+          allow delete: if isAdmin();
         }
       }
 
       match /historial/{id} {
         allow read: if isOwner(uid) || isStaff();
         allow create: if isStaff() || (isOwner(uid) && request.resource.data.actor_tipo == 'proveedor');
+        allow delete: if isAdmin();
       }
     }
 
@@ -79,6 +85,7 @@ service cloud.firestore {
     match /pv_correos/{id} {
       allow create: if signedIn();
       allow read, update: if isStaff();
+      allow delete: if isAdmin();
     }
 
     // Destinatarios de las alertas internas (los lee el navegador que envía la alerta).
