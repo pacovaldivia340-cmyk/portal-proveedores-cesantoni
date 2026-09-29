@@ -56,7 +56,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .stack { display: grid; gap: 16px; }
 
 /* ------------------------------------------------------------ encabezado con logotipos */
-.brandbar { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30; }
+.brandbar { background: var(--surface); border-bottom: 1px solid var(--line); }
 .brandbar-inner { display: flex; align-items: center; gap: 18px; padding: 10px 24px; max-width: 1440px; margin: 0 auto; min-height: 76px; }
 .logos { display: inline-flex; align-items: center; gap: 14px; text-decoration: none; }
 .logos img { display: block; height: auto; }
@@ -199,13 +199,13 @@ dialog.modal::backdrop { background: rgba(15, 18, 24, .55); }
 .steps-mini span { font-size: 13px; font-weight: 600; }
 .doclist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .doclist li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 13.5px; }
-.access { position: sticky; top: 100px; }
+.access { position: sticky; top: 20px; }
 .tabs { display: flex; gap: 4px; padding: 4px; background: #EDEFF2; border-radius: 12px; margin-bottom: 18px; }
 .tabs button { flex: 1; border: 0; background: transparent; padding: 10px; border-radius: 9px; font-weight: 700; font-size: 14px; cursor: pointer; color: var(--muted); }
 .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
-.wizard { max-width: 1240px; margin: 0 auto; padding: 28px 24px 120px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; align-items: start; }
-.stepper { position: sticky; top: 100px; display: grid; gap: 4px; }
+.wizard { max-width: 1240px; margin: 0 auto; padding: 28px 24px 60px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; align-items: start; }
+.stepper { position: sticky; top: 20px; display: grid; gap: 4px; }
 .stepper button { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: center; text-align: left; border: 0; background: transparent; padding: 10px; border-radius: 12px; cursor: pointer; }
 .stepper button:hover:not([disabled]) { background: var(--surface); }
 .stepper button[disabled] { cursor: default; opacity: .55; }
@@ -223,8 +223,8 @@ dialog.modal::backdrop { background: rgba(15, 18, 24, .55); }
 .folio-box .save.bad { color: #FFB4A6; }
 .step-card h1 { font-family: var(--display); font-size: 38px; letter-spacing: .3px; margin-bottom: 4px; }
 .step-card .intro { color: var(--muted); margin-bottom: 22px; }
-.actionbar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); z-index: 25; }
-.actionbar-inner { max-width: 1240px; margin: 0 auto; padding: 12px 24px; display: flex; gap: 12px; align-items: center; }
+.actionbar { margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.actionbar-inner { padding: 14px 20px; display: flex; gap: 12px; align-items: center; }
 
 .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 .doc-card { display: grid; grid-template-rows: auto 1fr auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
@@ -307,7 +307,7 @@ table.data tr.go:hover td { background: #FAFBFC; }
 .doc-item[aria-current="true"] { border-color: var(--accent); box-shadow: var(--ring); }
 .doc-item .n { font-weight: 700; font-size: 14px; }
 .doc-item .m { font-size: 12.5px; color: var(--muted); grid-column: 1 / -1; }
-.viewer { position: sticky; top: 96px; }
+.viewer { position: sticky; top: 20px; }
 .viewer .stage { background: #2B3340; border-radius: 0 0 var(--radius) var(--radius); min-height: 480px; height: 68vh; display: grid; place-items: center; overflow: auto; }
 .viewer .stage img { max-width: none; transform-origin: center; transition: transform .15s; box-shadow: 0 6px 30px rgba(0,0,0,.4); background: #fff; }
 .viewer .stage iframe { width: 100%; height: 100%; border: 0; background: #fff; }
@@ -343,7 +343,7 @@ table.data tr.go:hover td { background: #FAFBFC; }
   .stepper .t { font-size: 11px; }
   .folio-box { grid-column: 1 / -1; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
   .shell { grid-template-columns: minmax(0, 1fr); }
-  .side { flex-direction: row; overflow-x: auto; padding: 8px; gap: 4px; position: sticky; top: 77px; z-index: 20; }
+  .side { flex-direction: row; overflow-x: auto; padding: 8px; gap: 4px; }
   .side .grp { display: none; }
   .side a { white-space: nowrap; padding: 8px 10px; }
   .main { padding: 20px 16px 60px; }

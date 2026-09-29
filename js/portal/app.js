@@ -130,7 +130,7 @@ function asistente(paso) {
   if (PASOS.some((p) => p.id === paso)) pasoDatos(card, barra, paso);
   else if (paso === 'documentos') pasoDocumentos(card, barra);
   else pasoEnvio(card, barra);
-  mount(root, h('div', { class: 'wizard' }, lateral(paso), h('div', null, card)), h('div', { class: 'actionbar' }, barra));
+  mount(root, h('div', { class: 'wizard' }, lateral(paso), h('div', null, card, h('div', { class: 'actionbar' }, barra))));
   enfocar(document.getElementById('paso-titulo'));
 }
 
