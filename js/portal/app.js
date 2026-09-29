@@ -7,6 +7,15 @@ import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js';
 
 const root = document.getElementById('app');
 const PASOS_UI = [...PASOS.map((p) => ({ id: p.id, t: p.titulo, s: p.sub })), { id: 'documentos', t: 'Documentos', s: 'PDF o imagen' }, { id: 'revision', t: 'Enviar', s: 'Revisa y envía' }];
+const PASO_ICON = { contacto: 'user', empresa: 'building', operacion: 'truck', documentos: 'doc', revision: 'send' };
+const TITULO_ICON = PASO_ICON;
+/* Íconos de las opciones de selección. */
+const OPC_ICON = {
+  servicios: ['truck', 'boxes', 'pin', 'globe', 'swap', 'warehouse'],
+  unidades: ['truck', 'truck', 'layers', 'truck', 'truck', 'truck', 'layers', 'snow'],
+  monitoreo: ['radar', 'clock'],
+  gps: ['sat', 'x']
+};
 const DRAFT = 'cp_borrador';
 let prov = null, docs = [], errores = {}, actual = '';
 const guard = { dirty: false, vuelo: null, otra: false, cambiados: {}, seq: 0, texto: 'Todo guardado', mal: false, el: null };
@@ -142,18 +151,24 @@ function lateral(paso) {
     const cls = [i < idx && !falt.has(p.id) ? 'done' : '', i === idx ? 'current' : '', i < idx && falt.has(p.id) ? 'flag' : ''].join(' ').trim();
     nav.appendChild(h('button', { type: 'button', class: cls || null, disabled: !prov && i > 0, 'aria-current': i === idx ? 'step' : null,
       onclick: () => { if (p.id !== 'contacto' || !prov) ir(p.id); } },
-      h('span', { class: 'dot' }, i < idx && !falt.has(p.id) ? '✓' : String(i + 1)), h('span', null, h('span', { class: 't' }, p.t), h('br'), h('span', { class: 's' }, p.s))));
+      h('span', { class: 'dot' }, i < idx && !falt.has(p.id) ? icon('check') : icon(PASO_ICON[p.id] || 'doc')), h('span', null, h('span', { class: 't' }, p.t), h('br'), h('span', { class: 's' }, p.s))));
   });
   if (prov) {
     guard.el = h('div', { class: 'save' + (guard.mal ? ' bad' : ''), 'aria-live': 'polite' }, guard.texto);
-    const nueva = h('button', { type: 'button', class: 'link small', style: { color: '#FFD2B0', marginTop: '8px' } }, 'Generar nueva clave');
+    const nueva = h('button', { type: 'button', class: 'folio-key' }, icon('key'), 'Generar nueva clave');
     nueva.addEventListener('click', async () => {
       if (!confirm('Tu clave actual dejará de funcionar. ¿Generar una nueva?')) return;
       try { await credenciales(await P.nuevaClave(prov), false); } catch (e) { toast(friendly(e).message, 'bad'); }
     });
-    nav.appendChild(h('div', { class: 'folio-box' }, h('div', { class: 'k' }, 'Tu folio'), h('div', { class: 'v' }, prov.folio), guard.el, nueva));
+    nav.appendChild(h('div', { class: 'folio-box' }, h('div', { class: 'k' }, icon('flag'), 'Tu folio'), h('div', { class: 'v' }, prov.folio), guard.el, nueva));
   }
   return nav;
+}
+
+function encabezado(id, titulo) {
+  const n = PASOS_UI.findIndex((x) => x.id === id) + 1;
+  return h('div', { class: 'step-head' }, h('span', { class: 'step-ico' }, icon(TITULO_ICON[id] || 'doc')),
+    h('div', null, h('div', { class: 'step-kicker' }, 'Paso ' + n + ' de ' + PASOS_UI.length), h('h1', { id: 'paso-titulo' }, titulo)));
 }
 
 function valor(k) { return prov ? (prov.datos || {})[k] : borrador.datos[k]; }
@@ -172,7 +187,10 @@ function control(c, pasoId) {
   const req = c.req ? h('span', { class: 'req', 'aria-hidden': 'true' }, '*') : null;
   const desc = [c.help ? 'h-' + c.k : '', 'e-' + c.k].filter(Boolean).join(' ');
   if (c.t === 'multi' || c.t === 'radio') {
-    const grupo = h('div', { class: 'chips' });
+    const tipo = c.k === 'servicios' ? 'tiles-lg' : c.k === 'cobertura' || c.k === 'centroamerica' ? 'tiles-sm' : 'tiles-md';
+    const grupo = h('div', { class: 'tiles ' + tipo + (c.t === 'radio' ? ' is-radio' : '') });
+    const cuenta = c.t === 'multi' ? h('span', { class: 'count' }) : null;
+    const contar = () => { if (!cuenta) return; const n = grupo.querySelectorAll('input:checked').length; cuenta.textContent = n ? n + (n === 1 ? ' seleccionado' : ' seleccionados') : ''; };
     c.op.forEach((o, i) => {
       const inp = h('input', { type: c.t === 'multi' ? 'checkbox' : 'radio', name: c.k, value: o, id: 'f-' + c.k + '-' + i,
         checked: c.t === 'multi' ? (v || []).includes(o) : v === o });
@@ -185,12 +203,16 @@ function control(c, pasoId) {
           else if (inp.checked) arr = arr.filter((x) => x !== TODA);
           grupo.querySelectorAll('input').forEach((x) => { x.checked = arr.includes(x.value); });
         }
+        contar();
         cambiar(c.k, arr, pasoId);
       });
-      grupo.appendChild(h('label', { class: 'opt' + (o === TODA ? ' all' : '') }, inp, h('span', null, o)));
+      const ic = o === TODA ? 'map' : c.k === 'centroamerica' ? 'globe' : c.k === 'cobertura' ? 'pin' : (OPC_ICON[c.k] || [])[i];
+      grupo.appendChild(h('label', { class: 'opt' + (o === TODA ? ' all' : '') }, inp,
+        h('span', { class: 'box' }, ic ? h('span', { class: 'ico' }, icon(ic)) : null, h('span', { class: 'txt' }, o), h('span', { class: 'mark' }, icon('check')))));
     });
-    return h('fieldset', { class: 'field span-2' + (ver ? ' invalid' : ''), id: 'w-' + c.k, 'aria-describedby': desc },
-      h('legend', { class: 'label' }, c.l, req), help, grupo, err);
+    contar();
+    return h('fieldset', { class: 'field span-2 choice' + (ver ? ' invalid' : ''), id: 'w-' + c.k, 'aria-describedby': desc },
+      h('legend', { class: 'label' }, c.l, req, cuenta), help, grupo, err);
   }
   let inp;
   const base = { class: 'input', id: 'f-' + c.k, name: c.k, autocomplete: c.ac || 'off', 'aria-describedby': desc, 'aria-invalid': ver ? 'true' : null };
@@ -261,7 +283,7 @@ async function guardar() {
 
 function pasoDatos(card, barra, pasoId) {
   const p = PASOS.find((x) => x.id === pasoId);
-  card.append(h('h1', { id: 'paso-titulo' }, p.titulo), h('p', { class: 'intro' }, p.intro),
+  card.append(encabezado(pasoId, p.titulo), h('p', { class: 'intro' }, p.intro),
     h('div', { class: 'grid-2' }, p.campos.map((c) => control(c, pasoId))));
   const idx = PASOS_UI.findIndex((x) => x.id === pasoId);
   if (!prov) {
@@ -376,7 +398,7 @@ function pasoDocumentos(card, barra) {
     const tabla = P.tablero(prov, docs);
     const req = tabla.filter((t) => t.requerido), opc = tabla.filter((t) => !t.requerido);
     const n = req.filter((t) => t.actual).length;
-    mount(card, h('h1', { id: 'paso-titulo' }, 'Documentos'),
+    mount(card, encabezado('documentos', 'Documentos'),
       h('p', { class: 'intro' }, 'Sube cada documento en PDF o foto legible. El equipo de Logística revisa manualmente fechas y vigencias.'),
       h('div', { class: 'row', style: { marginBottom: '16px' } }, tag(n === req.length ? 'ok' : 'accent', n + ' de ' + req.length + ' requeridos entregados')),
       h('div', { class: 'docs-grid' }, req.map((t) => tarjetaDocumento(t, pintar))),
@@ -405,7 +427,7 @@ function pasoEnvio(card, barra) {
     ? h('div', { class: 'note note-warn' }, h('h3', null, 'Antes de enviar'), h('ul', { style: { margin: 0, paddingLeft: '18px' } },
       faltan.map((f) => h('li', null, h('button', { type: 'button', class: 'link', onclick: () => { mostrarTodo[f.paso] = true; ir(f.paso); } }, f.texto)))))
     : h('div', { class: 'note note-ok' }, h('h3', null, 'Todo listo para enviar'), h('p', null, 'Al enviar recibirás una confirmación en ' + prov.correo + ' y el equipo de Logística recibirá una alerta para revisarlo.')));
-  mount(card, h('h1', { id: 'paso-titulo' }, 'Revisa y envía'),
+  mount(card, encabezado('revision', 'Revisa y envía'),
     h('p', { class: 'intro' }, 'Confirma tu información. Después de enviar ya no podrás modificarla, salvo que te pidamos una corrección.'),
     aviso, h('div', { class: 'stack', style: { marginTop: '18px' } }, PASOS.map((p) => resumen(p.id, true)),
       h('section', { class: 'card card-pad' }, h('div', { class: 'row', style: { marginBottom: '12px' } }, h('h2', { style: { fontSize: '16px' } }, 'Documentos'),
