@@ -5,30 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Panel de proveedores | CESANTONI Somos Logística</title>
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#1B1C1E">
+  <meta name="theme-color" content="#1B2330">
   <link rel="icon" type="image/png" href="img/logo-somos.png">
+  <link rel="preload" href="fonts/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/app.css">
 </head>
-<body class="admin">
-  <a class="skip" href="#content">Saltar al contenido</a>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a href="#/proveedores" id="brand" aria-label="Panel de proveedores, inicio"></a>
-      <span class="app-name">Panel de proveedores</span>
+<body>
+  <a class="skip" href="#app">Saltar al contenido</a>
+  <header class="brandbar">
+    <div class="brandbar-inner">
+      <span id="brand"></span>
+      <span class="title">Panel de proveedores</span>
       <span class="spacer"></span>
-      <div class="user-menu" id="user-menu"></div>
+      <div class="row" id="top"></div>
     </div>
   </header>
-  <div id="app">
-    <noscript>
-      <div class="notice notice-bad"><h3>Se requiere JavaScript</h3><p>Activa JavaScript para usar el panel.</p></div>
-    </noscript>
-    <p class="muted" style="padding: 24px;">Cargando…</p>
-  </div>
+  <main id="app" tabindex="-1">
+    <noscript><div class="page"><div class="note note-bad"><h3>Se requiere JavaScript</h3><p>Actívalo para usar el panel.</p></div></div></noscript>
+    <p class="page muted" id="booting">Cargando…</p>
+  </main>
   <div id="toasts" aria-live="polite"></div>
   <script src="js/config.js"></script>
-  <script src="js/common.js"></script>
-  <script src="js/admin.js"></script>
-  <script type="module" src="js/backend.js"></script>
+  <script type="module" src="js/admin/app.js"></script>
 </body>
 </html>

@@ -3,33 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Registro de proveedores | CESANTONI Somos Logística</title>
-  <meta name="description" content="Alta de proveedores de transporte y logística de CESANTONI.">
-  <meta name="theme-color" content="#1B1C1E">
+  <title>Alta de proveedores de transporte | CESANTONI Somos Logística</title>
+  <meta name="description" content="Registro en línea de proveedores de transporte de CESANTONI.">
+  <meta name="theme-color" content="#1B2330">
   <link rel="icon" type="image/png" href="img/logo-somos.png">
+  <link rel="preload" href="fonts/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/app.css">
 </head>
-<body class="portal">
-  <a class="skip" href="#main">Saltar al contenido</a>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a href="#inicio" id="brand" aria-label="CESANTONI Somos Logística, inicio del registro"></a>
-      <span class="app-name">Registro de proveedores</span>
+<body>
+  <a class="skip" href="#app">Saltar al contenido</a>
+  <header class="brandbar">
+    <div class="brandbar-inner">
+      <span id="brand"></span>
+      <span class="title">Alta de proveedores</span>
       <span class="spacer"></span>
-      <div class="topbar-actions" id="top-actions"></div>
+      <div class="row" id="top"></div>
     </div>
   </header>
-  <main id="main" tabindex="-1">
-    <noscript>
-      <div class="notice notice-bad"><h3>Se requiere JavaScript</h3>
-        <p>Activa JavaScript en tu navegador para completar el registro de proveedor.</p></div>
-    </noscript>
-    <p class="muted" id="booting">Cargando…</p>
+  <main id="app" tabindex="-1">
+    <noscript><div class="page"><div class="note note-bad"><h3>Se requiere JavaScript</h3><p>Actívalo para completar tu registro.</p></div></div></noscript>
+    <p class="page muted" id="booting">Cargando…</p>
   </main>
   <div id="toasts" aria-live="polite"></div>
   <script src="js/config.js"></script>
-  <script src="js/common.js"></script>
-  <script src="js/portal.js"></script>
-  <script type="module" src="js/backend.js"></script>
+  <script type="module" src="js/portal/app.js"></script>
 </body>
 </html>

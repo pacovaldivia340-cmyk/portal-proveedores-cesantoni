@@ -30,6 +30,24 @@ Las colecciones usan el prefijo `pv_`, así que no tocan los datos de la versió
    - Account > General: *Public Key*. Account > Security: agrega el dominio `pacovaldivia340-cmyk.github.io` en *Allowed origins*.
    - Copia los tres valores en `js/config.js`.
 5. **Primer administrador**: abre el panel; la primera vez pide crear la cuenta del administrador principal.
+6. **Destinatarios**: en *Panel > Destinatarios* agrega los correos del equipo que recibirán las alertas internas.
+
+## Correos automáticos (dos diseños de tarjeta)
+
+| Momento | Al proveedor (tarjeta clara con folio) | Al equipo (tarjeta de alerta oscura) |
+|---|---|---|
+| Genera su folio | Folio, clave y botón para continuar | «Nuevo registro» (si el destinatario lo activó) |
+| Envía su registro completo | «¡Registro recibido!» | «Registro completo» con datos y lista de documentos |
+| Se le pide corrección | Motivo de cada documento | — |
+| Reenvía correcciones | «Recibimos tus correcciones» | «Correcciones recibidas» |
+| Resolución final | Aprobado / no aprobado | — |
+
+## Panel
+
+Tablero con indicadores y tarjetas de alerta (registros por revisar, correcciones sin respuesta,
+documentos por vencer, registros sin avance y correos no entregados), lista con filtros y CSV,
+expediente con visor de documentos (zoom, giro, PDF, versiones y descarga), revisión por documento,
+resolución, historial, correos con vista previa, destinatarios, usuarios, sistema y respaldo.
 
 ## Límites gratuitos
 
@@ -47,4 +65,4 @@ destinatarios y correos. Hazlo periódicamente.
 ## Pruebas
 
 `tests/web/e2e.mjs` (en el repositorio privado) recorre portal y panel con el emulador oficial de Firebase
-y las mismas reglas de seguridad: 30 de 30 verificaciones correctas.
+y las mismas reglas de seguridad: 29 de 29 verificaciones correctas.
