@@ -68,7 +68,7 @@ export const PASOS = [
     { k: 'alm_num', l: 'Número de almacenes o bodegas', t: 'number', req: true, min: 1, max: 1000, si: conAlmacen },
     { k: 'alm_m2', l: 'Superficie total (m²)', t: 'number', req: true, min: 1, max: 10000000, si: conAlmacen },
     { k: 'alm_tipo', l: 'Tipo de almacenaje', t: 'multi', req: true, si: conAlmacen,
-      op: ['Carga seca', 'Refrigerado', 'Congelado', 'Recinto fiscalizado', 'Mercancía peligrosa', 'Patio de contenedores', 'Piso (a granel)', 'Racks'] },
+      op: ['Carga seca', 'Congelado', 'Recinto fiscalizado', 'Mercancía peligrosa', 'Patio de contenedores', 'Piso (a granel)', 'Racks'] },
     { k: 'alm_posiciones', l: 'Posiciones de tarima (rack)', t: 'number', min: 0, max: 10000000, si: conAlmacen },
     { k: 'alm_andenes', l: 'Andenes o rampas de carga', t: 'number', min: 0, max: 10000, si: conAlmacen },
     { k: 'alm_seguridad', l: 'Seguridad y control', t: 'multi', si: conAlmacen,
