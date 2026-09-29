@@ -18,7 +18,7 @@ const tiene = (d, s) => (d.servicios || []).includes(s);
 /* Los datos de unidades se piden si aún no elige servicios o si ofrece transporte. */
 const conTransporte = (d) => !(d.servicios || []).length || (d.servicios || []).some((s) => TRANSPORTE.includes(s));
 const esForwarder = (d) => tiene(d, SRV.forwarder), conAlmacen = (d) => tiene(d, SRV.almacen), conManiobras = (d) => tiene(d, SRV.maniobras);
-export const UNIDADES = ["Caja seca 53'", "Caja seca 48'", 'Full (doble remolque)', 'Torton', 'Rabón', 'Camioneta 3.5 t', 'Plataforma', 'Refrigerado'];
+export const UNIDADES = ["Caja seca 53'", "Caja seca 48'", 'Full (doble remolque)', 'Torton', 'Rabón', 'Camioneta 3.5 t', 'Plataforma'];
 
 export const PASOS = [
   { id: 'contacto', titulo: 'Contacto', sub: 'Quién registra', intro: 'Con estos datos generamos tu folio y tu clave de acceso.', campos: [

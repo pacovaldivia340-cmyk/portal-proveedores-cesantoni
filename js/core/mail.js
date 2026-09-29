@@ -3,8 +3,8 @@
  *  - «interno»: tarjeta de alerta para el equipo de CESANTONI.
  * Cada intento queda en la bitácora pv_correos (sin guardar claves de acceso).
  */
-import { fb, CFG, COL, ref, col, getAll, now, newId, sha256, baseUrl } from './firebase.js?v=5';
-import { emailOk } from './catalog.js?v=5';
+import { fb, CFG, COL, ref, col, getAll, now, newId, sha256, baseUrl } from './firebase.js?v=6';
+import { emailOk } from './catalog.js?v=6';
 
 export const mailConfigured = () => !!(CFG.emailjs && CFG.emailjs.publicKey && CFG.emailjs.serviceId && CFG.emailjs.templateId);
 export const TIPOS = {

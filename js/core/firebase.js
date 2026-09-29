@@ -1,6 +1,6 @@
 /* Conexión con Firebase (Authentication + Firestore, plan gratuito Spark).
    El portal y el panel usan instancias separadas para que sus sesiones no se mezclen. */
-import * as fb from '../firebase-sdk.js?v=5';
+import * as fb from '../firebase-sdk.js?v=6';
 export { fb };
 
 export const CFG = window.CP_CONFIG || {};
