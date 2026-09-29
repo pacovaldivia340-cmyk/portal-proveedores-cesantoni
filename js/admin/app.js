@@ -1,9 +1,9 @@
 /* Panel del equipo de Logística. */
-import { start, configured, friendly, CFG } from '../core/firebase.js?v=8';
-import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=8';
-import * as E from '../core/equipo.js?v=8';
-import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=8';
-import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=8';
+import { start, configured, friendly, CFG } from '../core/firebase.js?v=9';
+import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=9';
+import * as E from '../core/equipo.js?v=9';
+import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=9';
+import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=9';
 
 const root = document.getElementById('app');
 let yo = null, cache = { provs: null, correos: null };
@@ -486,7 +486,8 @@ async function vistaCorreos() {
     mount(cont, h('div', { class: 'table-wrap' }, h('table', { class: 'data' }, h('thead', null, h('tr', null, ['Fecha', 'Tarjeta', 'Folio', 'Para', 'Asunto', 'Estado', ''].map((x) => h('th', { scope: 'col' }, x)))),
       h('tbody', null, r.map((c) => h('tr', null, h('td', null, fechaHora(c.creado_en)), h('td', null, tag(c.plantilla === 'interno' ? 'violet' : 'accent', c.plantilla === 'interno' ? 'Alerta interna' : 'Proveedor'), h('div', { class: 'cell-sub' }, TIPOS[c.tipo] || c.tipo)),
         h('td', null, c.proveedor_id ? h('a', { class: 'folio', href: '#/proveedor/' + c.proveedor_id }, c.folio) : '—'), h('td', null, c.para || '—'), h('td', null, c.asunto),
-        h('td', null, tag(c.estado === 'enviado' ? 'ok' : 'bad', c.estado === 'enviado' ? 'Enviado' : 'Error'), c.error ? h('div', { class: 'cell-sub' }, c.error.slice(0, 90)) : null),
+        h('td', null, tag(c.estado === 'enviado' ? 'ok' : 'bad', c.estado === 'enviado' ? 'Enviado' : 'Error'),
+          c.estado === 'enviado' && c.medio ? h('div', { class: 'cell-sub' }, c.medio === 'gmail' ? 'por Gmail' : 'por EmailJS') : null, c.error ? h('div', { class: 'cell-sub' }, c.error.slice(0, 90)) : null),
         h('td', { style: { whiteSpace: 'nowrap' } }, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => previa(c) }, 'Ver'), ' ',
           c.estado === 'error' ? h('button', { type: 'button', class: 'btn btn-sm', onclick: async (ev) => { busy(ev.currentTarget, true, '…'); try { const n = await E.reintentar(c); toast(n.estado === 'enviado' ? 'Correo enviado.' : 'Sigue sin enviarse: ' + n.error, n.estado === 'enviado' ? 'ok' : 'bad'); todos = await E.correos(); pintar(); } catch (e) { fail(e); } } }, 'Reintentar') : null, ' ',
           c.estado !== 'enviado' && esAdmin() ? h('button', { type: 'button', class: 'btn btn-sm btn-bad btn-icon', title: 'Borrar correo no enviado', 'aria-label': 'Borrar correo no enviado: ' + c.asunto,
@@ -504,7 +505,7 @@ async function vistaCorreos() {
     busy(reintentarTodos, false); toast(ok + ' de ' + f.length + ' enviados.', ok === f.length ? 'ok' : 'bad'); todos = await E.correos(); pintar();
   });
   mount(main, cabecera('Correos', 'Tarjetas al proveedor y alertas internas enviadas automáticamente', reintentarTodos),
-    mailConfigured() ? null : h('div', { class: 'note note-warn' }, h('h3', null, 'El envío de correos no está configurado'), h('p', null, 'Completa los datos de EmailJS en js/config.js. Los avisos quedan aquí con error y se pueden reintentar después.')),
+    mailConfigured() ? null : h('div', { class: 'note note-warn' }, h('h3', null, 'El envío de correos no está configurado'), h('p', null, 'Conecta Gmail (Apps Script) o EmailJS en js/config.js. Los avisos quedan aquí con error y se pueden reintentar después.')),
     h('section', { class: 'card card-pad' }, h('div', { class: 'toolbar', style: { gridTemplateColumns: 'minmax(220px,2fr) 1fr 1fr' } }, field('Buscar', q), field('Estado', estado), field('Tarjeta', tipo))), cont);
   pintar();
 }
@@ -607,7 +608,8 @@ async function vistaSistema() {
   const caja = (t, filas, extra) => h('section', { class: 'card card-pad' }, h('h2', { style: { fontSize: '16px', marginBottom: '12px' } }, t), h('dl', { class: 'kv' }, filas.map(([k, v]) => [h('dt', null, k), h('dd', null, v)])), extra || null);
   mount(main, cabecera('Sistema', 'Servicios gratuitos, uso y respaldo', esAdmin() ? resp : null),
     h('div', { class: 'grid-2' },
-      caja('Correo', [['Servicio', 'EmailJS (200 correos al mes gratis)'], ['Estado', mailConfigured() ? 'Configurado' : 'Pendiente: datos de EmailJS en js/config.js']],
+      caja('Correo', [['Principal', CFG.correo && CFG.correo.url ? 'Gmail por Apps Script (~100 destinatarios al día)' : 'Gmail: sin conectar (js/config.js > correo.url)'],
+        ['Respaldo', CFG.emailjs && CFG.emailjs.publicKey ? 'EmailJS (200 correos al mes)' : 'EmailJS: sin configurar'], ['Estado', mailConfigured() ? 'Configurado' : 'Pendiente en js/config.js']],
         esAdmin() ? h('div', { class: 'stack', style: { marginTop: '14px' } }, field('Correo de prueba', para), h('div', null, probar)) : null),
       caja('Base de datos', [['Servicio', 'Cloud Firestore · plan Spark (sin costo)'], ['Proyecto', CFG.firebase.projectId], ['Documentos guardados', mb.toFixed(1) + ' MB de 1024 MB gratuitos'],
         ['Registros', String(provs.length)]]),

@@ -7,7 +7,7 @@ Página independiente, sin servidor propio y sin Google Apps Script:
 | Página (portal `index.html` y panel `admin.html`) | GitHub Pages |
 | Accesos (proveedores con folio + clave, personal con correo + contraseña) | Firebase Authentication |
 | Registros, documentos (guardados por partes), bitácora y usuarios | Cloud Firestore (plan Spark) |
-| Correos de avisos | EmailJS (200 correos al mes) |
+| Correos de avisos | Gmail por Apps Script (~100 destinatarios al día) y EmailJS de respaldo (200 al mes) |
 | Recuperación de clave / contraseña | Correo de Firebase Authentication |
 
 Portal: `https://proveedores-cesantoni.github.io/`
@@ -29,8 +29,12 @@ Las colecciones usan el prefijo `pv_`, así que no tocan los datos de la versió
      `CESANTONI Somos Logística`, y en el contenido (botón «Edit Content» > «Code») escribe `{{{html}}}` → anota el *Template ID*.
    - Account > General: *Public Key*. Account > Security: agrega el dominio `proveedores-cesantoni.github.io` en *Allowed origins*.
    - Copia los tres valores en `js/config.js`.
-5. **Primer administrador**: abre el panel; la primera vez pide crear la cuenta del administrador principal.
-6. **Destinatarios**: en *Panel > Destinatarios* agrega los correos del equipo que recibirán las alertas internas.
+5. **Correos por Gmail** (opcional, recomendado): en https://script.google.com crea un proyecto nuevo
+   «Correo proveedores CESANTONI», pega `apps-script-correo/Correo.gs` y `appsscript.json` (repositorio privado),
+   Implementar > Nueva implementación > Aplicación web (Ejecutar como: yo; Acceso: cualquier usuario) y pega la URL `/exec`
+   en `js/config.js` > `correo.url`. Si falla o se acaba el límite diario, la página usa EmailJS.
+6. **Primer administrador**: abre el panel; la primera vez pide crear la cuenta del administrador principal.
+7. **Destinatarios**: en *Panel > Destinatarios* agrega los correos del equipo que recibirán las alertas internas.
 
 ## Correos automáticos (dos diseños de tarjeta)
 
@@ -54,7 +58,8 @@ resolución, historial, correos con vista previa, destinatarios, usuarios, siste
 - Firestore: 1 GiB en total, 50 000 lecturas y 20 000 escrituras al día. Los documentos (máx. 5 MB c/u)
   se guardan dentro de Firestore; 1 GiB alcanza para unos 200–300 expedientes completos.
   El uso se ve en *Panel > Sistema*.
-- EmailJS: 200 correos al mes. Los que fallen quedan en *Panel > Correos* para reintentar.
+- Gmail (Apps Script): unos 100 destinatarios al día con una cuenta de Gmail. EmailJS: 200 correos al mes de respaldo.
+  Los que fallen quedan en *Panel > Correos* para reintentar o borrar.
 - Sin lectura automática (OCR): las fechas y vigencias se revisan manualmente.
 
 ## Respaldo
@@ -65,4 +70,4 @@ destinatarios y correos. Hazlo periódicamente.
 ## Pruebas
 
 `tests/web/e2e.mjs` (en el repositorio privado) recorre portal y panel con el emulador oficial de Firebase
-y las mismas reglas de seguridad: 30 de 30 verificaciones correctas.
+y las mismas reglas de seguridad: 31 de 31 verificaciones correctas.

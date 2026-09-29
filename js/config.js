@@ -14,6 +14,11 @@ window.CP_CONFIG = {
     messagingSenderId: '168248619956',
     appId: '1:168248619956:web:f3e1078e744512bdd538e1'
   },
+  /* Correos por Gmail (Apps Script «Correo proveedores CESANTONI», carpeta apps-script-correo). Pega aquí la URL /exec
+     de la implementación. Si queda vacío o falla, se usa EmailJS. */
+  correo: {
+    url: ''
+  },
   emailjs: {
     publicKey: '5UDl-dY9RQ6EUDu1U',
     serviceId: 'service_ervj1qs',

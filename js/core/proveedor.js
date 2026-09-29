@@ -1,7 +1,7 @@
 /* Operaciones del proveedor sobre Firebase. La seguridad real la imponen las reglas de Firestore. */
-import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=8';
-import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, docLabel, requeridos, validar, normalizar } from './catalog.js?v=8';
-import { enviar as enviarCorreo, destinatarios } from './mail.js?v=8';
+import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=9';
+import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, docLabel, requeridos, validar, normalizar } from './catalog.js?v=9';
+import { enviar as enviarCorreo, destinatarios } from './mail.js?v=9';
 
 const CHUNK = 700000;
 const nuevaClaveTxt = () => { const c = randomChars(8, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'); return c.slice(0, 4) + '-' + c.slice(4); };

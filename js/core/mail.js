@@ -3,10 +3,12 @@
  *  - «interno»: tarjeta de alerta para el equipo de CESANTONI.
  * Cada intento queda en la bitácora pv_correos (sin guardar claves de acceso).
  */
-import { fb, CFG, COL, ref, col, getAll, now, newId, sha256, baseUrl } from './firebase.js?v=8';
-import { emailOk } from './catalog.js?v=8';
+import { fb, auth, CFG, COL, ref, col, getAll, now, newId, sha256, baseUrl } from './firebase.js?v=9';
+import { emailOk } from './catalog.js?v=9';
 
-export const mailConfigured = () => !!(CFG.emailjs && CFG.emailjs.publicKey && CFG.emailjs.serviceId && CFG.emailjs.templateId);
+const gmailConfigured = () => !!(CFG.correo && /^https:\/\//.test(CFG.correo.url || ''));
+const emailjsConfigured = () => !!(CFG.emailjs && CFG.emailjs.publicKey && CFG.emailjs.serviceId && CFG.emailjs.templateId);
+export const mailConfigured = () => gmailConfigured() || emailjsConfigured();
 export const TIPOS = {
   bienvenida: 'Proveedor · Folio y clave de acceso', recibido: 'Proveedor · Registro recibido', correccion: 'Proveedor · Corrección solicitada',
   correcciones_recibidas: 'Proveedor · Correcciones recibidas', resultado: 'Proveedor · Resultado de la revisión',
@@ -67,15 +69,39 @@ function texto(c) {
   return l.filter((x, i) => x !== '' || i > 1).join('\n');
 }
 
-async function deliver(to, c) {
-  if (!mailConfigured()) throw new Error('El envío de correos no está configurado (EmailJS en js/config.js).');
-  const html = c.plantilla === 'interno' ? cardInterno(c) : cardProveedor(c);
+/* Gmail por Apps Script (principal, ~100 destinatarios al día). */
+async function porGmail(to, c, html, proveedorId) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sin sesión para enviar por Gmail.');
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 25000);
+  try {
+    const r = await fetch(CFG.correo.url, { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: await user.getIdToken(), to, subject: c.asunto, html, text: texto(c), proveedor_id: proveedorId || '' }) });
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'respuesta ' + r.status);
+  } finally { clearTimeout(t); }
+}
+/* EmailJS (respaldo, 200 al mes). */
+async function porEmailJS(to, c, html) {
   const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ service_id: CFG.emailjs.serviceId, template_id: CFG.emailjs.templateId, user_id: CFG.emailjs.publicKey,
       template_params: { to_email: to, subject: c.asunto, html, message: texto(c) } })
   });
   if (!r.ok) throw new Error('EmailJS respondió ' + r.status + ': ' + (await r.text()).slice(0, 180));
+}
+/* Intenta Gmail y, si no se puede, EmailJS. Devuelve el medio usado. */
+async function deliver(to, c, proveedorId) {
+  if (!mailConfigured()) throw new Error('El envío de correos no está configurado (js/config.js).');
+  const html = c.plantilla === 'interno' ? cardInterno(c) : cardProveedor(c);
+  const fallas = [];
+  if (gmailConfigured()) {
+    try { await porGmail(to, c, html, proveedorId); return 'gmail'; } catch (err) { fallas.push('Gmail: ' + (err.name === 'AbortError' ? 'sin respuesta' : err.message)); }
+  }
+  if (emailjsConfigured()) {
+    try { await porEmailJS(to, c, html); return 'emailjs'; } catch (err) { fallas.push(err.message); }
+  }
+  throw new Error(fallas.join(' · '));
 }
 
 function guardable(c) {
@@ -104,7 +130,7 @@ export async function enviar(c) {
     reg.error = c.plantilla === 'interno' ? 'No hay destinatarios internos activos para esta alerta (Panel > Destinatarios).' : 'Correo del destinatario no válido.';
   } else {
     reg.intentos = 1;
-    try { await deliver(para.join(','), c); reg.estado = 'enviado'; reg.enviado_en = now(); }
+    try { reg.medio = await deliver(para.join(','), c, reg.proveedor_id); reg.estado = 'enviado'; reg.enviado_en = now(); }
     catch (err) { reg.estado = 'error'; reg.error = String(err.message || err).slice(0, 400); recientes.delete(llave); }
   }
   const id = newId();
@@ -123,7 +149,7 @@ export async function reintentar(reg) {
   const patch = { para: para || '', intentos: Number(reg.intentos || 0) + 1 };
   if (!patch.para) patch.error = 'No hay destinatarios activos para esta alerta.';
   else {
-    try { await deliver(patch.para.replace(/\s/g, ''), c); patch.estado = 'enviado'; patch.enviado_en = now(); patch.error = ''; }
+    try { patch.medio = await deliver(patch.para.replace(/\s/g, ''), c, reg.proveedor_id); patch.estado = 'enviado'; patch.enviado_en = now(); patch.error = ''; }
     catch (err) { patch.estado = 'error'; patch.error = String(err.message || err).slice(0, 400); }
   }
   await fb.updateDoc(ref(COL.correos, reg.id), patch);

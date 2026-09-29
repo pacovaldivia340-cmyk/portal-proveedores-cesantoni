@@ -1,8 +1,8 @@
 /* Operaciones del equipo interno (panel). Las reglas de Firestore limitan todo al personal activo. */
-import { fb, auth, db, CFG, COL, ref, col, getOne, getAll, where, now, newId, emulate, portalUrl, panelUrl, AppError } from './firebase.js?v=8';
-import { DOCS, ESTADOS, REVISION, ALERTAS, docLabel, requeridos, emailOk } from './catalog.js?v=8';
-import { enviar as enviarCorreo, reintentar as reintentarCorreo } from './mail.js?v=8';
-import { diasDesde, diasHasta } from './ui.js?v=8';
+import { fb, auth, db, CFG, COL, ref, col, getOne, getAll, where, now, newId, emulate, portalUrl, panelUrl, AppError } from './firebase.js?v=9';
+import { DOCS, ESTADOS, REVISION, ALERTAS, docLabel, requeridos, emailOk } from './catalog.js?v=9';
+import { enviar as enviarCorreo, reintentar as reintentarCorreo } from './mail.js?v=9';
+import { diasDesde, diasHasta } from './ui.js?v=9';
 
 const claveOk = (p) => String(p).length >= 10 && /[A-Za-z]/.test(p) && /\d/.test(p);
 const CLAVE_MSG = 'La contraseña debe tener al menos 10 caracteres, con letras y números.';
