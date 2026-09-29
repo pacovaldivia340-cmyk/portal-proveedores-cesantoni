@@ -445,3 +445,5 @@ table.data tr.go:hover td { background: #FAFBFC; }
   .kv dd { margin-bottom: 8px; }
 }
 @media print { .brandbar, .side, .actionbar, #toasts { display: none !important; } body { background: #fff; } }
+.consent-box { border-left: 4px solid var(--accent); }
+.consent-box.invalid { border-color: var(--bad); background: var(--bad-50); }

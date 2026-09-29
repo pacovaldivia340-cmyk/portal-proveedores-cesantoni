@@ -1,7 +1,7 @@
 /* Operaciones del proveedor sobre Firebase. La seguridad real la imponen las reglas de Firestore. */
-import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=12';
-import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, docLabel, requeridos, validar, normalizar } from './catalog.js?v=12';
-import { enviar as enviarCorreo, destinatarios } from './mail.js?v=12';
+import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=13';
+import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, docLabel, requeridos, validar, normalizar } from './catalog.js?v=13';
+import { enviar as enviarCorreo, destinatarios } from './mail.js?v=13';
 
 const CHUNK = 700000;
 const nuevaClaveTxt = () => { const c = randomChars(8, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'); return c.slice(0, 4) + '-' + c.slice(4); };
@@ -56,8 +56,7 @@ export function pendientes(prov, docs) {
   return out;
 }
 
-export async function iniciar(entrada, consentimiento) {
-  if (!consentimiento) throw new AppError('Marca la autorización para continuar.', 422, { consentimiento: 'Obligatorio.' });
+export async function iniciar(entrada) {
   const datos = {};
   PASOS[0].campos.forEach((c) => { datos[c.k] = normalizar(c, entrada[c.k]); });
   const errores = validar(datos).contacto || {};
@@ -180,7 +179,7 @@ export async function enviar(prov) {
   const b = fb.writeBatch(db);
   b.update(ref(COL.prov, prov.id), patch);
   b.set(ref(COL.prov, prov.id, 'historial', newId()), { tipo: eraCorreccion ? 'reenvio' : 'envio', actor: prov.correo, actor_tipo: 'proveedor', creado_en: t,
-    texto: eraCorreccion ? 'Correcciones enviadas a revisión (envío ' + envios + ').' : 'Registro completo enviado a revisión.' });
+    texto: (eraCorreccion ? 'Correcciones enviadas a revisión (envío ' + envios + ').' : 'Registro completo enviado a revisión.') + ' Aceptó el aviso de privacidad.' });
   await b.commit();
   Object.assign(prov, patch);
   const d = prov.datos || {};

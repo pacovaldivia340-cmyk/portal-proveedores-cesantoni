@@ -1,9 +1,9 @@
 /* Portal del proveedor. */
-import { start, configured, friendly, AppError } from '../core/firebase.js?v=12';
-import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=12';
-import * as P from '../core/proveedor.js?v=12';
-import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, comprimirImagen, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=12';
-import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=12';
+import { start, configured, friendly, AppError } from '../core/firebase.js?v=13';
+import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=13';
+import * as P from '../core/proveedor.js?v=13';
+import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, comprimirImagen, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=13';
+import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=13';
 
 const root = document.getElementById('app');
 const PASOS_UI = [...PASOS.map((p) => ({ id: p.id, t: p.titulo, s: p.sub })), { id: 'documentos', t: 'Documentos', s: 'PDF o imagen' }, { id: 'revision', t: 'Enviar', s: 'Revisa y envía' }];
@@ -307,22 +307,18 @@ function pasoDatos(card, barra, pasoId) {
     h('div', { class: 'grid-2' }, p.campos.map((c) => control(c, pasoId))));
   const idx = PASOS_UI.findIndex((x) => x.id === pasoId);
   if (!prov) {
-    const ok = h('input', { type: 'checkbox', id: 'consent', checked: !!borrador.consent });
-    const errC = h('p', { class: 'err', id: 'consent-err', hidden: true }, 'Marca la casilla para continuar.');
-    ok.addEventListener('change', () => { borrador.consent = ok.checked; errC.hidden = true; try { sessionStorage.setItem(DRAFT, JSON.stringify(borrador)); } catch (e) { /* nada */ } });
+    // El aviso se muestra desde el primer dato; la aceptación (casilla) se pide al final, antes de enviar.
     const priv = (window.CP_CONFIG || {}).privacyUrl;
-    card.append(h('div', { style: { marginTop: '22px' } }, h('label', { class: 'check', for: 'consent' }, ok,
-      h('span', null, priv ? ['He leído el ', h('a', { href: priv, target: '_blank', rel: 'noopener' }, 'aviso de privacidad'), ' y '] : null,
-        (priv ? 'otorgo' : 'Otorgo') + ' mi consentimiento expreso para que CESANTONI trate mis datos, incluidos los fiscales y bancarios, para evaluar mi registro como proveedor.')), errC));
+    if (priv) card.append(h('p', { class: 'small muted', style: { marginTop: '22px' } }, 'Tus datos se tratan conforme a nuestro ',
+      h('a', { href: priv, target: '_blank', rel: 'noopener' }, 'aviso de privacidad'), '. Te pediremos aceptarlo al final, antes de enviar tu registro.'));
     const go = h('button', { type: 'button', class: 'btn btn-primary' }, 'Generar mi folio');
     go.addEventListener('click', async () => {
       const e = validar(borrador.datos).contacto || {};
       borrador.errores = e; mostrarTodo.contacto = true; pintarErrores('contacto');
-      errC.hidden = ok.checked;
-      if (Object.keys(e).length || !ok.checked) { const f = root.querySelector('.field.invalid input, .field.invalid select'); if (f) f.focus(); else if (!ok.checked) ok.focus(); return; }
+      if (Object.keys(e).length) { const f = root.querySelector('.field.invalid input, .field.invalid select'); if (f) f.focus(); return; }
       busy(go, true, 'Generando folio…');
       try {
-        const r = await P.iniciar(borrador.datos, true);
+        const r = await P.iniciar(borrador.datos);
         prov = r.prov; docs = []; errores = validar(prov.datos);
         borrador = { datos: {} }; try { sessionStorage.removeItem(DRAFT); } catch (x) { /* nada */ }
         await credenciales(r.clave, true);
@@ -463,8 +459,20 @@ function pasoEnvio(card, barra) {
       h('section', { class: 'card card-pad' }, h('div', { class: 'row', style: { marginBottom: '12px' } }, h('h2', { style: { fontSize: '16px' } }, 'Documentos'),
         h('span', { class: 'spacer' }), h('button', { type: 'button', class: 'link', onclick: () => ir('documentos') }, 'Editar')),
         h('dl', { class: 'kv' }, entregados.map((t) => [h('dt', null, t.def.l), h('dd', null, t.actual.nombre)])))));
+  // Aceptación del aviso de privacidad: sin la casilla marcada no se puede enviar.
+  const priv = (window.CP_CONFIG || {}).privacyUrl;
+  const ok = h('input', { type: 'checkbox', id: 'consent' });
+  const errC = h('p', { class: 'err', id: 'consent-err', hidden: true }, 'Para enviar tu registro debes aceptar el aviso de privacidad.');
+  const acepta = h('section', { class: 'card card-pad consent-box', style: { marginTop: '18px' } }, h('label', { class: 'check', for: 'consent' }, ok,
+    h('span', null, priv ? ['He leído el ', h('a', { href: priv, target: '_blank', rel: 'noopener' }, 'aviso de privacidad'), ' y '] : null,
+      (priv ? 'otorgo' : 'Otorgo') + ' mi consentimiento expreso para que CESANTONI trate mis datos, incluidos los fiscales y bancarios, para evaluar mi registro como proveedor.')), errC);
+  card.appendChild(acepta);
   const send = h('button', { type: 'button', class: 'btn btn-primary', disabled: faltan.length > 0 }, 'Enviar registro');
-  send.addEventListener('click', () => enviarRegistro(send));
+  ok.addEventListener('change', () => { errC.hidden = true; acepta.classList.remove('invalid'); });
+  send.addEventListener('click', () => {
+    if (!ok.checked) { errC.hidden = false; acepta.classList.add('invalid'); ok.focus(); acepta.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    enviarRegistro(send);
+  });
   mount(barra, h('button', { type: 'button', class: 'btn', onclick: () => ir('documentos') }, 'Anterior'), h('span', { class: 'spacer' }), send);
 }
 
