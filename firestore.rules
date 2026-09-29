@@ -25,6 +25,18 @@ service cloud.firestore {
       allow create: if signedIn() && getAfter(/databases/$(database)/documents/pv_admins/$(request.auth.uid)).data.rol == 'admin';
     }
 
+    // Contador del folio consecutivo (PROV-0001, PROV-0002…): solo sube de uno en uno
+    // y siempre junto con el alta de ese folio.
+    match /pv_config/folio {
+      allow get: if signedIn();
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1 &&
+        existsAfter(/databases/$(database)/documents/pv_proveedores/$(request.auth.uid)) &&
+        !exists(/databases/$(database)/documents/pv_proveedores/$(request.auth.uid));
+      allow update: if signedIn() && request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1 &&
+        existsAfter(/databases/$(database)/documents/pv_proveedores/$(request.auth.uid)) &&
+        !exists(/databases/$(database)/documents/pv_proveedores/$(request.auth.uid));
+    }
+
     match /pv_admins/{uid} {
       allow read: if isStaff() || isOwner(uid);
       allow create: if isAdmin() ||
@@ -39,7 +51,8 @@ service cloud.firestore {
     match /pv_folios/{folio} {
       allow get: if true;
       allow list: if isStaff();
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid &&
+        request.resource.data.n == getAfter(/databases/$(database)/documents/pv_config/folio).data.n;
       allow delete: if isAdmin();
     }
 

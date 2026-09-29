@@ -1,9 +1,9 @@
 /* Portal del proveedor. */
-import { start, configured, friendly, AppError } from '../core/firebase.js?v=10';
-import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=10';
-import * as P from '../core/proveedor.js?v=10';
-import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=10';
-import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=10';
+import { start, configured, friendly, AppError } from '../core/firebase.js?v=11';
+import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=11';
+import * as P from '../core/proveedor.js?v=11';
+import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=11';
+import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=11';
 
 const root = document.getElementById('app');
 const PASOS_UI = [...PASOS.map((p) => ({ id: p.id, t: p.titulo, s: p.sub })), { id: 'documentos', t: 'Documentos', s: 'PDF o imagen' }, { id: 'revision', t: 'Enviar', s: 'Revisa y envía' }];
@@ -96,7 +96,7 @@ function accesos() {
         h('p', { class: 'muted' }, 'Primero tus datos de contacto. Al terminar ese paso recibes tu folio y una clave para continuar desde cualquier dispositivo.'),
         h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: () => ir('contacto') }, 'Iniciar registro'));
     } else if (activa === 'continuar') {
-      const folio = h('input', { class: 'input', id: 'c-folio', autocomplete: 'off', autocapitalize: 'characters', placeholder: 'PRV-' + new Date().getFullYear() + '-00000000' });
+      const folio = h('input', { class: 'input', id: 'c-folio', autocomplete: 'off', autocapitalize: 'characters', placeholder: 'PROV-0001' });
       const clave = h('input', { class: 'input', id: 'c-clave', autocomplete: 'off', placeholder: 'XXXX-XXXX' });
       const err = h('p', { class: 'err', role: 'alert', hidden: true });
       const btn = h('button', { type: 'submit', class: 'btn btn-dark btn-block' }, 'Entrar');
@@ -110,7 +110,7 @@ function accesos() {
       });
       mount(cuerpo, h('h2', { style: { fontSize: '22px', marginBottom: '12px' } }, 'Continuar mi registro'), form);
     } else {
-      const folio = h('input', { class: 'input', id: 'o-folio', autocomplete: 'off', placeholder: 'Folio' });
+      const folio = h('input', { class: 'input', id: 'o-folio', autocomplete: 'off', placeholder: 'PROV-0001' });
       const correo = h('input', { class: 'input', id: 'o-correo', type: 'email', autocomplete: 'email', placeholder: 'nombre@empresa.com' });
       const msg = h('p', { class: 'small', role: 'status' });
       const btn = h('button', { type: 'submit', class: 'btn btn-block' }, 'Enviarme el correo');

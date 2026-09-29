@@ -1,11 +1,19 @@
 /* Operaciones del proveedor sobre Firebase. La seguridad real la imponen las reglas de Firestore. */
-import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=10';
-import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, docLabel, requeridos, validar, normalizar } from './catalog.js?v=10';
-import { enviar as enviarCorreo, destinatarios } from './mail.js?v=10';
+import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=11';
+import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, docLabel, requeridos, validar, normalizar } from './catalog.js?v=11';
+import { enviar as enviarCorreo, destinatarios } from './mail.js?v=11';
 
 const CHUNK = 700000;
 const nuevaClaveTxt = () => { const c = randomChars(8, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'); return c.slice(0, 4) + '-' + c.slice(4); };
-const FOLIO_RE = /^PRV-\d{4}-\d{8}$/;
+/* Folio consecutivo PROV-0001, PROV-0002… (los anteriores PRV-AAAA-######## siguen funcionando). */
+const FOLIO_RE = /^(PROV-\d{4,}|PRV-\d{4}-\d{8})$/;
+const folioTxt = (n) => 'PROV-' + String(n).padStart(4, '0');
+/* Acepta «prov 12», «PROV12» o «12» y lo escribe como PROV-0012. */
+export function normalizarFolio(v) {
+  const s = String(v || '').trim().toUpperCase().replace(/\s+/g, '');
+  const m = s.match(/^(?:PROV-?)?(\d{1,9})$/);
+  return m ? folioTxt(Number(m[1])) : s;
+}
 
 async function historial(uid, tipo, texto, actor) {
   await fb.setDoc(ref(COL.prov, uid, 'historial', newId()), { tipo, texto, actor: actor || '', actor_tipo: 'proveedor', creado_en: now() });
@@ -54,12 +62,6 @@ export async function iniciar(entrada, consentimiento) {
   PASOS[0].campos.forEach((c) => { datos[c.k] = normalizar(c, entrada[c.k]); });
   const errores = validar(datos).contacto || {};
   if (Object.keys(errores).length) throw new AppError('Revisa los datos marcados.', 422, errores);
-  let folio = '';
-  for (let i = 0; i < 6 && !folio; i++) {
-    const f = 'PRV-' + new Date().getFullYear() + '-' + randomChars(8, '0123456789');
-    if (!(await getOne(ref(COL.folios, f)))) folio = f;
-  }
-  if (!folio) throw new AppError('No fue posible generar el folio. Inténtalo de nuevo.', 503);
   const clave = nuevaClaveTxt();
   let cred;
   try { cred = await fb.createUserWithEmailAndPassword(auth, datos.correo, clave); }
@@ -68,15 +70,21 @@ export async function iniciar(entrada, consentimiento) {
     throw e;
   }
   const uid = cred.user.uid, t = now();
+  let folio = '';
   const prov = { folio, estado: 'captura', datos, razon_social: datos.razon_social, pais: datos.pais, contacto: datos.contacto, correo: datos.correo,
     telefono: datos.telefono, acceso_correo: datos.correo, paso: 'empresa', envios: 0, creado_en: t, actualizado_en: t, enviado_en: null, reenviado_en: null,
     resuelto_en: null, resultado: 'pendiente', responsable_id: null, responsable: '', notas: '', entregados: {}, revisiones: {} };
   try {
-    const b = fb.writeBatch(db);
-    b.set(ref(COL.prov, uid), prov);
-    b.set(ref(COL.folios, folio), { correo: datos.correo, uid });
-    b.set(ref(COL.prov, uid, 'historial', newId()), { tipo: 'inicio', texto: 'Folio ' + folio + ' generado.', actor: datos.correo, actor_tipo: 'proveedor', creado_en: t });
-    await b.commit();
+    // Consecutivo en una transacción: dos registros al mismo tiempo nunca reciben el mismo número.
+    await fb.runTransaction(db, async (tx) => {
+      const cref = ref(COL.config, 'folio'), cs = await tx.get(cref);
+      const n = (cs.exists() ? Number(cs.data().n) || 0 : 0) + 1;
+      folio = folioTxt(n); prov.folio = folio;
+      if (cs.exists()) tx.update(cref, { n }); else tx.set(cref, { n });
+      tx.set(ref(COL.folios, folio), { correo: datos.correo, uid, n });
+      tx.set(ref(COL.prov, uid), prov);
+      tx.set(ref(COL.prov, uid, 'historial', newId()), { tipo: 'inicio', texto: 'Folio ' + folio + ' generado.', actor: datos.correo, actor_tipo: 'proveedor', creado_en: t });
+    });
   } catch (e) { await cred.user.delete().catch(() => null); throw e; }
   prov.id = uid;
   await enviarCorreo({ plantilla: 'proveedor', tipo: 'bienvenida', proveedorId: uid, folio, para: datos.correo, secreto: true,
@@ -93,7 +101,7 @@ export async function iniciar(entrada, consentimiento) {
 }
 
 export async function entrar(folio, clave) {
-  folio = String(folio || '').trim().toUpperCase();
+  folio = normalizarFolio(folio);
   const tecleada = String(clave || '').trim();
   const f = FOLIO_RE.test(folio) ? await getOne(ref(COL.folios, folio)) : null;
   if (!f || !tecleada) throw new AppError('Folio o clave incorrectos.', 401);
@@ -106,7 +114,7 @@ export async function entrar(folio, clave) {
 }
 
 export async function recuperar(folio, correo) {
-  folio = String(folio || '').trim().toUpperCase(); correo = String(correo || '').trim().toLowerCase();
+  folio = normalizarFolio(folio); correo = String(correo || '').trim().toLowerCase();
   const f = FOLIO_RE.test(folio) ? await getOne(ref(COL.folios, folio)) : null;
   if (f && f.correo === correo) {
     try { await fb.sendPasswordResetEmail(auth, correo, { url: portalUrl() }); }
