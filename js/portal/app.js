@@ -1,9 +1,9 @@
 /* Portal del proveedor. */
-import { start, configured, friendly, AppError } from '../core/firebase.js?v=11';
-import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=11';
-import * as P from '../core/proveedor.js?v=11';
-import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=11';
-import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=11';
+import { start, configured, friendly, AppError } from '../core/firebase.js?v=12';
+import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=12';
+import * as P from '../core/proveedor.js?v=12';
+import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, comprimirImagen, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=12';
+import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=12';
 
 const root = document.getElementById('app');
 const PASOS_UI = [...PASOS.map((p) => ({ id: p.id, t: p.titulo, s: p.sub })), { id: 'documentos', t: 'Documentos', s: 'PDF o imagen' }, { id: 'revision', t: 'Enviar', s: 'Revisa y envía' }];
@@ -312,7 +312,8 @@ function pasoDatos(card, barra, pasoId) {
     ok.addEventListener('change', () => { borrador.consent = ok.checked; errC.hidden = true; try { sessionStorage.setItem(DRAFT, JSON.stringify(borrador)); } catch (e) { /* nada */ } });
     const priv = (window.CP_CONFIG || {}).privacyUrl;
     card.append(h('div', { style: { marginTop: '22px' } }, h('label', { class: 'check', for: 'consent' }, ok,
-      h('span', null, 'Autorizo a CESANTONI a usar estos datos para evaluar mi registro como proveedor', priv ? [' conforme al ', h('a', { href: priv, target: '_blank', rel: 'noopener' }, 'aviso de privacidad')] : null, '.')), errC));
+      h('span', null, priv ? ['He leído el ', h('a', { href: priv, target: '_blank', rel: 'noopener' }, 'aviso de privacidad'), ' y '] : null,
+        (priv ? 'otorgo' : 'Otorgo') + ' mi consentimiento expreso para que CESANTONI trate mis datos, incluidos los fiscales y bancarios, para evaluar mi registro como proveedor.')), errC));
     const go = h('button', { type: 'button', class: 'btn btn-primary' }, 'Generar mi folio');
     go.addEventListener('click', async () => {
       const e = validar(borrador.datos).contacto || {};
@@ -387,11 +388,20 @@ function tarjetaDocumento(t, alCambiar) {
 
 async function cargar(t, file, card, resultado, btn, alCambiar) {
   if (!ACCEPT[file.type]) { mount(resultado, h('p', { class: 'err', role: 'alert' }, 'Formato no permitido. Sube PDF, JPG, PNG o WEBP.')); return; }
-  if (file.size > MAX_MB * 1048576) { mount(resultado, h('p', { class: 'err', role: 'alert' }, 'El archivo pesa ' + tamano(file.size) + '; el máximo es ' + MAX_MB + ' MB.')); return; }
+  const esFoto = file.type !== 'application/pdf';
+  // Las fotos se optimizan antes de validar el tamaño: una foto de celular de 12 MB queda en menos de 1 MB.
+  if (file.size > (esFoto ? 30 : MAX_MB) * 1048576) { mount(resultado, h('p', { class: 'err', role: 'alert' }, 'El archivo pesa ' + tamano(file.size) + '; el máximo es ' + MAX_MB + ' MB.')); return; }
   const barra = h('span');
-  mount(resultado, h('p', { class: 'small muted', style: { margin: '8px 0 6px' } }, 'Subiendo ' + file.name + '…'), h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Carga' }, barra));
+  const estado = h('p', { class: 'small muted', style: { margin: '8px 0 6px' } }, (esFoto ? 'Optimizando ' : 'Subiendo ') + file.name + '…');
+  mount(resultado, estado, h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Carga' }, barra));
   busy(btn, true, 'Subiendo…');
   try {
+    if (esFoto) {
+      const original = file.size;
+      file = await comprimirImagen(file);
+      if (file.size > MAX_MB * 1048576) throw new AppError('La imagen pesa ' + tamano(file.size) + ' aun optimizada; el máximo es ' + MAX_MB + ' MB.', 413);
+      estado.textContent = 'Subiendo ' + file.name + (file.size < original ? ' (optimizada: ' + tamano(original) + ' → ' + tamano(file.size) + ')' : '') + '…';
+    }
     const b64 = await fileToB64(file);
     barra.style.width = '10%';
     const r = await P.subir(prov, t.def.k, file, b64, (x) => { barra.style.width = Math.round(10 + x * 90) + '%'; });

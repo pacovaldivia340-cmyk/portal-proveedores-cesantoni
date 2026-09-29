@@ -24,6 +24,11 @@ window.CP_CONFIG = {
     serviceId: 'service_ervj1qs',
     templateId: 'template_lhvvtfp'
   },
-  /* Opcional: liga al aviso de privacidad. */
-  privacyUrl: ''
+  /* Aviso de privacidad (aviso-privacidad.html). Completa razón social, domicilio y correo para solicitudes ARCO. */
+  privacyUrl: 'aviso-privacidad.html',
+  aviso: {
+    responsable: 'CESANTONI',
+    domicilio: '',
+    correo: ''
+  }
 };

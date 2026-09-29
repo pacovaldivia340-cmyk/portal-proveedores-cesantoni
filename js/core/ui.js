@@ -124,6 +124,30 @@ export function modal({ title, body, actions, wide, locked, onClose }) {
   return { el: dlg, close };
 }
 
+/* Reduce fotos (JPG, PNG, WEBP) antes de subirlas: lado mayor de 2200 px y JPG de buena calidad.
+   Un documento sigue siendo legible y pesa 5 a 10 veces menos. Los PDF no se tocan. Si algo falla, se usa el original. */
+export async function comprimirImagen(file, { lado = 2200, calidad = 0.82 } = {}) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+  try {
+    let src, w, hh;
+    if (window.createImageBitmap) { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); w = src.width; hh = src.height; }
+    else {
+      src = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = URL.createObjectURL(file); });
+      w = src.naturalWidth; hh = src.naturalHeight;
+    }
+    const k = Math.min(1, lado / Math.max(w, hh));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * k); c.height = Math.round(hh * k);
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);   // fondo blanco para PNG con transparencia
+    g.drawImage(src, 0, 0, c.width, c.height);
+    if (src.close) src.close();
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', calidad));
+    if (!blob || blob.size >= file.size * 0.9) return file;
+    return new File([blob], String(file.name).replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+  } catch (e) { return file; }
+}
+
 export function saveBlob(blob, name) {
   const a = h('a', { href: URL.createObjectURL(blob), download: name });
   document.body.appendChild(a); a.click();

@@ -62,6 +62,13 @@ resolución, historial, correos con vista previa, destinatarios, usuarios, siste
   Los que fallen quedan en *Panel > Correos* para reintentar o borrar.
 - Sin lectura automática (OCR): las fechas y vigencias se revisan manualmente.
 
+## Resumen diario, fotos y aviso de privacidad
+
+- **Resumen diario** (Apps Script `apps-script-correo`, función `instalarResumen`): a las 8:00 envía a los destinatarios con
+  «Resumen diario» un correo con los pendientes del tablero. Si no hay pendientes no envía nada.
+- **Fotos optimizadas**: JPG, PNG y WEBP se reducen en el navegador (lado mayor 2200 px) antes de subirlas. Los PDF no cambian.
+- **Aviso de privacidad**: `aviso-privacidad.html`; razón social, domicilio y correo ARCO en `js/config.js` > `aviso`.
+
 ## Respaldo
 
 *Panel > Sistema > Descargar respaldo (JSON)* descarga registros, documentos (datos), usuarios,
@@ -70,4 +77,4 @@ destinatarios y correos. Hazlo periódicamente.
 ## Pruebas
 
 `tests/web/e2e.mjs` (en el repositorio privado) recorre portal y panel con el emulador oficial de Firebase
-y las mismas reglas de seguridad: 31 de 31 verificaciones correctas.
+y las mismas reglas de seguridad: 33 de 33 verificaciones correctas.

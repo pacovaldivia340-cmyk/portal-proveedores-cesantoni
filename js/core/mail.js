@@ -3,8 +3,8 @@
  *  - «interno»: tarjeta de alerta para el equipo de CESANTONI.
  * Cada intento queda en la bitácora pv_correos (sin guardar claves de acceso).
  */
-import { fb, auth, CFG, COL, ref, col, getAll, now, newId, sha256, baseUrl } from './firebase.js?v=11';
-import { emailOk } from './catalog.js?v=11';
+import { fb, auth, CFG, COL, ref, col, getAll, now, newId, sha256, baseUrl } from './firebase.js?v=12';
+import { emailOk } from './catalog.js?v=12';
 
 const gmailConfigured = () => !!(CFG.correo && /^https:\/\//.test(CFG.correo.url || ''));
 const emailjsConfigured = () => !!(CFG.emailjs && CFG.emailjs.publicKey && CFG.emailjs.serviceId && CFG.emailjs.templateId);
@@ -13,7 +13,7 @@ export const TIPOS = {
   bienvenida: 'Proveedor · Folio y clave de acceso', recibido: 'Proveedor · Registro recibido', correccion: 'Proveedor · Corrección solicitada',
   correcciones_recibidas: 'Proveedor · Correcciones recibidas', resultado: 'Proveedor · Resultado de la revisión',
   inicio: 'Alerta interna · Registro iniciado', completo: 'Alerta interna · Registro completo enviado', correcciones: 'Alerta interna · Correcciones reenviadas',
-  prueba: 'Correo de prueba'
+  prueba: 'Correo de prueba', resumen: 'Alerta interna · Resumen diario'
 };
 
 const e = (s) => String(s === null || s === undefined ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -44,7 +44,7 @@ function cardProveedor(c) {
 
 /* Tarjeta de alerta interna: franja oscura con etiqueta de alerta y resumen para revisar. */
 function cardInterno(c) {
-  const color = { completo: '#1D7F52', correcciones: '#5B4CC4', inicio: '#2A68A8', prueba: '#2A68A8' }[c.tipo] || '#D77129';
+  const color = { completo: '#1D7F52', correcciones: '#5B4CC4', inicio: '#2A68A8', prueba: '#2A68A8', resumen: '#D77129' }[c.tipo] || '#D77129';
   return '<div style="background:#E9ECF1;padding:28px 12px;' + FONT + '"><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:18px;overflow:hidden">' +
     '<tr><td style="padding:18px 28px;background:#fff">' + LOGOS + '</td></tr>' +
     '<tr><td style="padding:22px 28px;background:#1B2330;color:#fff">' +

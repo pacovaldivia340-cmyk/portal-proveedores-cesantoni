@@ -1,8 +1,8 @@
 /* Operaciones del equipo interno (panel). Las reglas de Firestore limitan todo al personal activo. */
-import { fb, auth, db, CFG, COL, ref, col, getOne, getAll, where, now, newId, emulate, portalUrl, panelUrl, AppError } from './firebase.js?v=11';
-import { DOCS, ESTADOS, REVISION, ALERTAS, docLabel, requeridos, emailOk } from './catalog.js?v=11';
-import { enviar as enviarCorreo, reintentar as reintentarCorreo } from './mail.js?v=11';
-import { diasDesde, diasHasta } from './ui.js?v=11';
+import { fb, auth, db, CFG, COL, ref, col, getOne, getAll, where, now, newId, emulate, portalUrl, panelUrl, AppError } from './firebase.js?v=12';
+import { DOCS, ESTADOS, REVISION, ALERTAS, docLabel, requeridos, emailOk } from './catalog.js?v=12';
+import { enviar as enviarCorreo, reintentar as reintentarCorreo } from './mail.js?v=12';
+import { diasDesde, diasHasta } from './ui.js?v=12';
 
 const claveOk = (p) => String(p).length >= 10 && /[A-Za-z]/.test(p) && /\d/.test(p);
 const CLAVE_MSG = 'La contraseña debe tener al menos 10 caracteres, con letras y números.';
@@ -219,7 +219,7 @@ export async function guardarDestinatario(id, { nombre, correo, avisos, activo }
   if (todos.some((r) => r.correo === correo && r.id !== id)) throw new AppError('Ese correo ya está en la lista.', 409);
   const rid = id || newId();
   const prev = todos.find((r) => r.id === id);
-  await fb.setDoc(ref(COL.dest, rid), { nombre: String(nombre || '').trim().slice(0, 120), correo, avisos: { inicio: !!(avisos && avisos.inicio), envio: !!(avisos && avisos.envio) },
+  await fb.setDoc(ref(COL.dest, rid), { nombre: String(nombre || '').trim().slice(0, 120), correo, avisos: { inicio: !!(avisos && avisos.inicio), envio: !!(avisos && avisos.envio), resumen: !(avisos && avisos.resumen === false) },
     activo: activo !== false, creado_en: (prev && prev.creado_en) || now() });
 }
 export const borrarDestinatario = (id) => fb.deleteDoc(ref(COL.dest, id));

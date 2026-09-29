@@ -1,9 +1,9 @@
 /* Panel del equipo de Logística. */
-import { start, configured, friendly, CFG } from '../core/firebase.js?v=11';
-import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=11';
-import * as E from '../core/equipo.js?v=11';
-import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=11';
-import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=11';
+import { start, configured, friendly, CFG } from '../core/firebase.js?v=12';
+import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=12';
+import * as E from '../core/equipo.js?v=12';
+import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=12';
+import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=12';
 
 const root = document.getElementById('app');
 let yo = null, cache = { provs: null, correos: null };
@@ -517,30 +517,31 @@ async function vistaDestinatarios() {
   const lista0 = await E.destinatarios();
   const editable = esAdmin();
   const nombre = h('input', { class: 'input', id: 'd-nombre' }), correo = h('input', { class: 'input', id: 'd-correo', type: 'email' });
-  const ini = h('input', { type: 'checkbox', id: 'd-ini' }), env = h('input', { type: 'checkbox', id: 'd-env', checked: true });
+  const ini = h('input', { type: 'checkbox', id: 'd-ini' }), env = h('input', { type: 'checkbox', id: 'd-env', checked: true }), res = h('input', { type: 'checkbox', id: 'd-res', checked: true });
   const add = h('button', { type: 'submit', class: 'btn btn-dark' }, 'Agregar');
   const form = h('form', { class: 'card card-pad stack', novalidate: true }, h('h2', { style: { fontSize: '16px' } }, 'Agregar destinatario'),
     h('div', { class: 'grid-2' }, field('Nombre o área', nombre), field('Correo', correo, { req: true })),
-    h('div', { class: 'row' }, h('label', { class: 'check', for: 'd-env' }, env, 'Alerta de registro completo y correcciones reenviadas'), h('label', { class: 'check', for: 'd-ini' }, ini, 'Alerta de registro iniciado')), h('div', null, add));
+    h('div', { class: 'row' }, h('label', { class: 'check', for: 'd-env' }, env, 'Alerta de registro completo y correcciones reenviadas'), h('label', { class: 'check', for: 'd-ini' }, ini, 'Alerta de registro iniciado'),
+      h('label', { class: 'check', for: 'd-res' }, res, 'Resumen diario de pendientes (8:00 a. m.)')), h('div', null, add));
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault(); busy(add, true, 'Agregando…');
-    try { await E.guardarDestinatario(null, { nombre: nombre.value, correo: correo.value, avisos: { inicio: ini.checked, envio: env.checked } }); toast('Destinatario agregado.', 'ok'); vistaDestinatarios(); }
+    try { await E.guardarDestinatario(null, { nombre: nombre.value, correo: correo.value, avisos: { inicio: ini.checked, envio: env.checked, resumen: res.checked } }); toast('Destinatario agregado.', 'ok'); vistaDestinatarios(); }
     catch (e) { busy(add, false); fail(e); }
   });
   const fila = (r) => {
-    const tg = (k, l) => { const cb = h('input', { type: 'checkbox', checked: !!(r.avisos || {})[k], disabled: !editable, 'aria-label': l + ': ' + r.correo });
+    const tg = (k, l) => { const cb = h('input', { type: 'checkbox', checked: k === 'resumen' ? (r.avisos || {}).resumen !== false : !!(r.avisos || {})[k], disabled: !editable, 'aria-label': l + ': ' + r.correo });
       cb.addEventListener('change', async () => { try { await E.guardarDestinatario(r.id, { ...r, avisos: { ...(r.avisos || {}), [k]: cb.checked } }); r.avisos = { ...(r.avisos || {}), [k]: cb.checked }; toast('Actualizado.', 'ok'); } catch (e) { cb.checked = !cb.checked; fail(e); } });
       return h('td', null, cb); };
     const act = h('input', { type: 'checkbox', checked: r.activo !== false, disabled: !editable, 'aria-label': 'Activo: ' + r.correo });
     act.addEventListener('change', async () => { try { await E.guardarDestinatario(r.id, { ...r, activo: act.checked }); toast('Actualizado.', 'ok'); } catch (e) { fail(e); } });
-    return h('tr', null, h('td', null, r.nombre || '—'), h('td', null, r.correo), tg('envio', 'Registro completo'), tg('inicio', 'Registro iniciado'), h('td', null, act),
+    return h('tr', null, h('td', null, r.nombre || '—'), h('td', null, r.correo), tg('envio', 'Registro completo'), tg('inicio', 'Registro iniciado'), tg('resumen', 'Resumen diario'), h('td', null, act),
       h('td', null, editable ? h('button', { type: 'button', class: 'btn btn-sm btn-bad', onclick: async () => { if (!confirm('¿Quitar a ' + r.correo + '?')) return; try { await E.borrarDestinatario(r.id); vistaDestinatarios(); } catch (e) { fail(e); } } }, 'Quitar') : null));
   };
   const sinEnvio = !lista0.some((r) => r.activo !== false && (r.avisos || {}).envio);
   mount(main, cabecera('Destinatarios', 'Correos de CESANTONI que reciben las alertas internas'),
     sinEnvio ? h('div', { class: 'note note-warn' }, h('p', null, 'Nadie recibe la alerta de «registro completo». Agrega al menos un destinatario.')) : null,
     editable ? form : h('p', { class: 'muted' }, 'Solo un administrador puede modificar esta lista.'),
-    lista0.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data' }, h('thead', null, h('tr', null, ['Nombre', 'Correo', 'Registro completo', 'Registro iniciado', 'Activo', ''].map((x) => h('th', { scope: 'col' }, x)))), h('tbody', null, lista0.map(fila))))
+    lista0.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data' }, h('thead', null, h('tr', null, ['Nombre', 'Correo', 'Registro completo', 'Registro iniciado', 'Resumen diario', 'Activo', ''].map((x) => h('th', { scope: 'col' }, x)))), h('tbody', null, lista0.map(fila))))
       : h('div', { class: 'card empty' }, h('h2', null, 'Sin destinatarios'), h('p', null, 'Agrega los correos del equipo que deben recibir las alertas.')));
 }
 
