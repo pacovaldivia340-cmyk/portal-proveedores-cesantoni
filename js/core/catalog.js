@@ -102,6 +102,10 @@ export const DOCS = [
 export const docLabel = (k) => (DOCS.find((d) => d.k === k) || { l: k }).l;
 export const requeridos = (datos) => DOCS.filter((d) => !d.condicional || (datos.centroamerica || []).length).map((d) => d.k);
 
+/* Tipo de registro: alta nueva (portal) o proveedor con el que ya se trabaja (link de actualización para el directorio). */
+export const TIPOS_PROV = { nuevo: 'Alta nueva', actual: 'Proveedor actual' };
+export const tipoDe = (p) => (p && p.tipo === 'actual' ? 'actual' : 'nuevo');
+
 export const ESTADOS = {
   captura: { l: 'En captura', tag: '' },
   enviado: { l: 'Enviado, pendiente de revisión', tag: 'info' },

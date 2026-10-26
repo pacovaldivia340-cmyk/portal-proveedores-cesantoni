@@ -1,9 +1,9 @@
 /* Panel del equipo de Logística. */
-import { start, configured, friendly, CFG } from '../core/firebase.js?v=13';
-import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=13';
-import * as E from '../core/equipo.js?v=13';
-import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=13';
-import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=13';
+import { start, configured, friendly, CFG } from '../core/firebase.js?v=14';
+import { PASOS, DOCS, ESTADOS, REVISION, MOTIVOS, PAISES, CENTROAMERICA, SERVICIOS, ALERTAS, ACCEPT, TODA, TIPOS_PROV, tipoDe, docLabel, requeridos, visible, aplica } from '../core/catalog.js?v=14';
+import * as E from '../core/equipo.js?v=14';
+import { TIPOS, vistaPrevia, mailConfigured } from '../core/mail.js?v=14';
+import { h, mount, icon, logos, tag, toast, busy, modal, field, select, fecha, fechaHora, dia, diasDesde, tamano, lista, plural, debounce, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=14';
 
 const root = document.getElementById('app');
 let yo = null, cache = { provs: null, correos: null };
@@ -191,12 +191,13 @@ async function listado(params) {
   shell('proveedores');
   mount(main, cabecera('Proveedores'), cargando());
   const provs = cache.provs = await E.proveedores();
-  const f = { q: params.get('q') || '', estado: params.get('estado') || '', pais: '', cobertura: '', servicio: '', desde: '', hasta: '', orden: 'reciente', pagina: 1 };
+  const f = { q: params.get('q') || '', estado: params.get('estado') || '', tipo: params.get('tipo') || '', pais: '', cobertura: '', servicio: '', desde: '', hasta: '', orden: 'reciente', pagina: 1 };
   const POR = 25;
   const cont = h('div');
   const q = h('input', { class: 'input', id: 'f-q', type: 'search', placeholder: 'Folio, empresa, RFC, contacto o correo', value: f.q });
   const pais = select([['', 'Todos los países'], ...PAISES.map((p) => [p, p])], '', { id: 'f-pais' });
   const cob = select([['', 'Cualquier cobertura'], ['nacional', 'Solo México'], ['centroamerica', 'Con Centroamérica'], ...CENTROAMERICA.map((p) => [p, 'Centroamérica: ' + p])], '', { id: 'f-cob' });
+  const tipo = select([['', 'Altas y actuales'], ['nuevo', TIPOS_PROV.nuevo], ['actual', TIPOS_PROV.actual + ' (directorio)']], f.tipo, { id: 'f-tipo' });
   const serv = select([['', 'Todos los servicios'], ...SERVICIOS.map((s) => [s, s])], '', { id: 'f-serv' });
   const orden = select([['reciente', 'Actividad reciente'], ['empresa', 'Empresa A–Z'], ['inicio', 'Fecha de inicio'], ['envio', 'Fecha de envío']], 'reciente', { id: 'f-orden' });
   const desde = h('input', { class: 'input', type: 'date', id: 'f-desde' }), hasta = h('input', { class: 'input', type: 'date', id: 'f-hasta' });
@@ -206,6 +207,7 @@ async function listado(params) {
     let r = provs.filter((p) => {
       const d = p.datos || {}, ca = d.centroamerica || [];
       if (txt && ![p.folio, p.razon_social, d.nombre_comercial, d.rfc, p.contacto, p.correo].join(' ').toLowerCase().includes(txt)) return false;
+      if (f.tipo && tipoDe(p) !== f.tipo) return false;
       if (f.pais && p.pais !== f.pais) return false;
       if (f.servicio && !(d.servicios || []).includes(f.servicio)) return false;
       if (f.cobertura === 'nacional' && ca.length) return false;
@@ -237,7 +239,8 @@ async function listado(params) {
           const rd = E.resumenDocs(p), d = p.datos || {};
           const tr = h('tr', { class: 'go', tabindex: '0' },
             h('td', null, h('a', { class: 'folio', href: '#/proveedor/' + p.id }, p.folio)),
-            h('td', null, h('strong', null, p.razon_social || '—'), h('div', { class: 'cell-sub' }, [d.nombre_comercial, d.rfc].filter(Boolean).join(' · '))),
+            h('td', null, h('strong', null, p.razon_social || '—'), h('div', { class: 'cell-sub' }, [d.nombre_comercial, d.rfc].filter(Boolean).join(' · ')),
+              tipoDe(p) === 'actual' ? h('div', { style: { marginTop: '6px' } }, tag('violet', TIPOS_PROV.actual)) : null),
             h('td', null, etiquetaEstado(p.estado)),
             h('td', null, h('div', { class: 'meter', 'aria-hidden': 'true' }, rd.det.map((x) => h('i', { class: { falta: '', pendiente: 'up', aprobado: 'ok', correccion: 'bad', rechazado: 'bad' }[x.estado] || '', title: docLabel(x.k) }))),
               h('div', { class: 'cell-sub' }, rd.entregados + ' de ' + rd.req + (rd.aprobados ? ' · ' + rd.aprobados + ' aprobados' : ''))),
@@ -257,12 +260,12 @@ async function listado(params) {
           h('button', { type: 'button', class: 'btn btn-sm', disabled: f.pagina >= paginas, onclick: () => { f.pagina++; pintar(); } }, 'Siguiente'))) : null);
   };
   q.addEventListener('input', debounce(() => { f.q = q.value.trim(); f.pagina = 1; pintar(); }, 250));
-  [[pais, 'pais'], [cob, 'cobertura'], [serv, 'servicio'], [orden, 'orden'], [desde, 'desde'], [hasta, 'hasta']].forEach(([el, k]) => el.addEventListener('change', () => { f[k] = el.value; f.pagina = 1; pintar(); }));
-  const limpiar = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => { Object.assign(f, { q: '', estado: '', pais: '', cobertura: '', servicio: '', desde: '', hasta: '' }); [q, pais, cob, serv, desde, hasta].forEach((x) => { x.value = ''; }); pintar(); } }, 'Limpiar filtros');
+  [[tipo, 'tipo'], [pais, 'pais'], [cob, 'cobertura'], [serv, 'servicio'], [orden, 'orden'], [desde, 'desde'], [hasta, 'hasta']].forEach(([el, k]) => el.addEventListener('change', () => { f[k] = el.value; f.pagina = 1; pintar(); }));
+  const limpiar = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => { Object.assign(f, { q: '', estado: '', tipo: '', pais: '', cobertura: '', servicio: '', desde: '', hasta: '' }); [q, tipo, pais, cob, serv, desde, hasta].forEach((x) => { x.value = ''; }); pintar(); } }, 'Limpiar filtros');
   const exportar = h('button', { type: 'button', class: 'btn btn-dark' }, 'Exportar CSV');
   exportar.addEventListener('click', () => exportarCsv(filtrar().r));
   mount(main, cabecera('Proveedores', 'Busca, filtra y abre cada expediente', exportar),
-    h('section', { class: 'card card-pad stack' }, h('div', { class: 'toolbar' }, field('Buscar', q), field('País', pais), field('Cobertura', cob), field('Servicio', serv), field('Ordenar', orden)),
+    h('section', { class: 'card card-pad stack' }, h('div', { class: 'toolbar' }, field('Buscar', q), field('Tipo', tipo), field('País', pais), field('Cobertura', cob), field('Servicio', serv), field('Ordenar', orden)),
       h('div', { class: 'row' }, field('Registrado desde', desde), field('Hasta', hasta), h('span', { class: 'spacer' }), limpiar), seg), cont);
   pintar();
 }
@@ -281,12 +284,12 @@ const EXTRA_CSV = PASOS.find((x) => x.id === 'operacion').campos.filter((c) => c
 function exportarCsv(provs) {
   const cols = ['Folio', 'Estado', 'Resultado', 'Razón social', 'Nombre comercial', 'RFC', 'País', 'Contacto', 'Puesto', 'Correo', 'Teléfono', 'Domicilio', 'Ciudad', 'Estado (domicilio)', 'CP',
     'Servicios', 'Cobertura nacional', 'Centroamérica', 'Tipos de unidad', 'Número de unidades', 'Monitoreo', 'GPS', 'Documentos entregados', 'Documentos aprobados', 'Responsable',
-    'Notas internas', 'Inicio', 'Envío', 'Actualización', ...EXTRA_CSV.map((c) => (c.k.startsWith('fw_') ? 'Forwarder: ' : c.k.startsWith('alm_') ? 'Almacenes: ' : 'Maniobras: ') + c.l)];
+    'Notas internas', 'Inicio', 'Envío', 'Actualización', 'Tipo de registro', ...EXTRA_CSV.map((c) => (c.k.startsWith('fw_') ? 'Forwarder: ' : c.k.startsWith('alm_') ? 'Almacenes: ' : 'Maniobras: ') + c.l)];
   const cel = (v) => { let s = String(v === null || v === undefined ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
   const filas = provs.map((p) => { const d = p.datos || {}, r = E.resumenDocs(p);
     return [p.folio, (ESTADOS[p.estado] || {}).l, p.resultado, p.razon_social, d.nombre_comercial, d.rfc, p.pais, p.contacto, d.puesto, p.correo, p.telefono,
       [d.calle, d.colonia].filter(Boolean).join(', '), d.ciudad, d.estado, d.cp, lista(d.servicios), lista(d.cobertura), lista(d.centroamerica), lista(d.unidades),
-      d.num_unidades, d.monitoreo, d.gps, r.entregados + ' de ' + r.req, r.aprobados, p.responsable, p.notas, fechaHora(p.creado_en), fechaHora(p.enviado_en), fechaHora(p.actualizado_en),
+      d.num_unidades, d.monitoreo, d.gps, r.entregados + ' de ' + r.req, r.aprobados, p.responsable, p.notas, fechaHora(p.creado_en), fechaHora(p.enviado_en), fechaHora(p.actualizado_en), TIPOS_PROV[tipoDe(p)],
       ...EXTRA_CSV.map((c) => (aplica(c, d) ? (Array.isArray(d[c.k]) ? d[c.k].join(', ') : d[c.k]) : ''))]; });
   const csv = '﻿' + [cols, ...filas].map((f) => f.map(cel).join(',')).join('\r\n');
   saveBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'Proveedores_CESANTONI_' + dia(new Date().toISOString()) + '.csv');
@@ -331,7 +334,7 @@ async function expediente(id) {
     const rd = E.resumenDocs(p), dd = p.datos || {};
     mount(cab, h('div', { class: 'dossier-head' },
       h('div', null, h('div', { class: 'folio' }, p.folio), h('div', { class: 'cell-sub' }, 'Actualizado ' + fechaHora(p.actualizado_en))),
-      h('div', null, h('h1', { id: 'exp-t', tabindex: '-1' }, p.razon_social), h('div', { class: 'row', style: { marginTop: '8px' } }, etiquetaEstado(p.estado),
+      h('div', null, h('h1', { id: 'exp-t', tabindex: '-1' }, p.razon_social), h('div', { class: 'row', style: { marginTop: '8px' } }, etiquetaEstado(p.estado), tag(tipoDe(p) === 'actual' ? 'violet' : '', TIPOS_PROV[tipoDe(p)]),
         tag(rd.entregados === rd.req ? 'ok' : '', 'Documentos ' + rd.entregados + '/' + rd.req), rd.aprobados ? tag('ok', rd.aprobados + ' aprobados') : null,
         rd.correccion ? tag('warn', rd.correccion + ' en corrección') : null)),
       h('div', { class: 'row' }, D.docs.some((d) => d.vigente && d.revision === 'correccion' && d.notificada === false)

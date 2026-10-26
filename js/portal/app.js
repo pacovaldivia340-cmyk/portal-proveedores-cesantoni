@@ -1,9 +1,9 @@
 /* Portal del proveedor. */
-import { start, configured, friendly, AppError } from '../core/firebase.js?v=13';
-import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=13';
-import * as P from '../core/proveedor.js?v=13';
-import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, comprimirImagen, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=13';
-import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=13';
+import { start, configured, friendly, AppError } from '../core/firebase.js?v=14';
+import { PASOS, DOCS, ACCEPT, ACCEPT_ATTR, MAX_MB, ESTADOS, REVISION, CENTROAMERICA, TODA, requeridos, validar, visible, aplica } from '../core/catalog.js?v=14';
+import * as P from '../core/proveedor.js?v=14';
+import { h, mount, icon, logos, tag, toast, busy, modal, fecha, fechaHora, hora, tamano, lista, plural, debounce, copy, fileToB64, comprimirImagen, b64ToBlob, saveBlob, fatal } from '../core/ui.js?v=14';
+import { fb, auth, db, COL, ref, col, getAll } from '../core/firebase.js?v=14';
 
 const root = document.getElementById('app');
 const PASOS_UI = [...PASOS.map((p) => ({ id: p.id, t: p.titulo, s: p.sub })), { id: 'documentos', t: 'Documentos', s: 'PDF o imagen' }, { id: 'revision', t: 'Enviar', s: 'Revisa y envía' }];
@@ -19,6 +19,9 @@ const OPC_ICON = {
   man_horario: ['radar', 'clock', 'cal']
 };
 const DRAFT = 'cp_borrador';
+/* actualizar.html (o ?tipo=actual): link para proveedores con los que ya se trabaja. */
+const TIPO = document.body.dataset.tipo === 'actual' || new URLSearchParams(location.search).get('tipo') === 'actual' ? 'actual' : 'nuevo';
+const ACT = TIPO === 'actual';
 let prov = null, docs = [], errores = {}, actual = '';
 const guard = { dirty: false, vuelo: null, otra: false, cambiados: {}, seq: 0, texto: 'Todo guardado', mal: false, el: null };
 let borrador = (() => { try { return JSON.parse(sessionStorage.getItem(DRAFT) || '{}'); } catch (e) { return {}; } })();
@@ -69,13 +72,15 @@ function portada() {
     tag(d.regla === 'antiguedad' ? 'accent' : 'info', d.regla === 'antiguedad' ? 'Máx. 3 meses' : 'Vigente')));
   mount(root, h('div', { class: 'portal-hero' },
     h('section', null,
-      h('span', { class: 'eyebrow' }, 'Red de transporte · CESANTONI'),
-      h('h1', { class: 'hero-title' }, 'Alta de proveedores de transporte'),
-      h('p', { class: 'hero-lead' }, 'Registra tu empresa, sube tus documentos y sigue tu revisión en línea. Tu avance se guarda solo: puedes pausar y continuar cuando quieras.'),
+      h('span', { class: 'eyebrow' }, ACT ? 'Directorio de proveedores · CESANTONI' : 'Red de transporte · CESANTONI'),
+      h('h1', { class: 'hero-title' }, ACT ? 'Actualización de proveedores' : 'Alta de proveedores de transporte'),
+      h('p', { class: 'hero-lead' }, ACT
+        ? 'Si ya trabajas con CESANTONI, actualiza aquí los datos de tu empresa y tus documentos vigentes para nuestro directorio de proveedores. Tu avance se guarda solo: puedes pausar y continuar cuando quieras.'
+        : 'Registra tu empresa, sube tus documentos y sigue tu revisión en línea. Tu avance se guarda solo: puedes pausar y continuar cuando quieras.'),
       h('div', { class: 'steps-mini' },
         h('div', null, h('b', null, '01'), h('span', null, 'Datos de tu empresa')),
         h('div', null, h('b', null, '02'), h('span', null, 'Documentos en PDF o foto')),
-        h('div', null, h('b', null, '03'), h('span', null, 'Revisión y alta'))),
+        h('div', null, h('b', null, '03'), h('span', null, ACT ? 'Revisión y actualización' : 'Revisión y alta'))),
       h('div', { class: 'card card-pad' }, h('h2', { style: { fontSize: '16px', marginBottom: '12px' } }, 'Documentos que te pediremos'),
         h('ul', { class: 'doclist' }, req),
         h('p', { class: 'small muted', style: { margin: '12px 0 0' } }, 'PDF, JPG, PNG o WEBP de hasta ' + MAX_MB + ' MB. Operación nacional y cobertura en Centroamérica: ' + CENTROAMERICA.join(', ') + '.'))),
@@ -92,9 +97,9 @@ function accesos() {
   function pintar() {
     mount(barra, tabs.map(([k, l]) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(k === activa), onclick: () => { activa = k; pintar(); } }, l)));
     if (activa === 'nuevo') {
-      mount(cuerpo, h('h2', { style: { fontSize: '22px', marginBottom: '8px' } }, 'Empieza tu registro'),
+      mount(cuerpo, h('h2', { style: { fontSize: '22px', marginBottom: '8px' } }, ACT ? 'Actualiza tus datos' : 'Empieza tu registro'),
         h('p', { class: 'muted' }, 'Primero tus datos de contacto. Al terminar ese paso recibes tu folio y una clave para continuar desde cualquier dispositivo.'),
-        h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: () => ir('contacto') }, 'Iniciar registro'));
+        h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: () => ir('contacto') }, ACT ? 'Iniciar actualización' : 'Iniciar registro'));
     } else if (activa === 'continuar') {
       const folio = h('input', { class: 'input', id: 'c-folio', autocomplete: 'off', autocapitalize: 'characters', placeholder: 'PROV-0001' });
       const clave = h('input', { class: 'input', id: 'c-clave', autocomplete: 'off', placeholder: 'XXXX-XXXX' });
@@ -318,7 +323,7 @@ function pasoDatos(card, barra, pasoId) {
       if (Object.keys(e).length) { const f = root.querySelector('.field.invalid input, .field.invalid select'); if (f) f.focus(); return; }
       busy(go, true, 'Generando folio…');
       try {
-        const r = await P.iniciar(borrador.datos);
+        const r = await P.iniciar(borrador.datos, TIPO);
         prov = r.prov; docs = []; errores = validar(prov.datos);
         borrador = { datos: {} }; try { sessionStorage.removeItem(DRAFT); } catch (x) { /* nada */ }
         await credenciales(r.clave, true);

@@ -1,7 +1,7 @@
 /* Operaciones del proveedor sobre Firebase. La seguridad real la imponen las reglas de Firestore. */
-import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=13';
-import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, docLabel, requeridos, validar, normalizar } from './catalog.js?v=13';
-import { enviar as enviarCorreo, destinatarios } from './mail.js?v=13';
+import { fb, auth, db, COL, ref, col, getOne, getAll, now, newId, randomChars, sha256, portalUrl, panelUrl, AppError } from './firebase.js?v=14';
+import { PASOS, CAMPOS, DOCS, ACCEPT, MAX_MB, ESTADOS, TIPOS_PROV, tipoDe, docLabel, requeridos, validar, normalizar } from './catalog.js?v=14';
+import { enviar as enviarCorreo, destinatarios } from './mail.js?v=14';
 
 const CHUNK = 700000;
 const nuevaClaveTxt = () => { const c = randomChars(8, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'); return c.slice(0, 4) + '-' + c.slice(4); };
@@ -56,7 +56,8 @@ export function pendientes(prov, docs) {
   return out;
 }
 
-export async function iniciar(entrada) {
+export async function iniciar(entrada, tipo) {
+  const esActual = tipo === 'actual';
   const datos = {};
   PASOS[0].campos.forEach((c) => { datos[c.k] = normalizar(c, entrada[c.k]); });
   const errores = validar(datos).contacto || {};
@@ -70,7 +71,7 @@ export async function iniciar(entrada) {
   }
   const uid = cred.user.uid, t = now();
   let folio = '';
-  const prov = { folio, estado: 'captura', datos, razon_social: datos.razon_social, pais: datos.pais, contacto: datos.contacto, correo: datos.correo,
+  const prov = { folio, tipo: esActual ? 'actual' : 'nuevo', estado: 'captura', datos, razon_social: datos.razon_social, pais: datos.pais, contacto: datos.contacto, correo: datos.correo,
     telefono: datos.telefono, acceso_correo: datos.correo, paso: 'empresa', envios: 0, creado_en: t, actualizado_en: t, enviado_en: null, reenviado_en: null,
     resuelto_en: null, resultado: 'pendiente', responsable_id: null, responsable: '', notas: '', entregados: {}, revisiones: {} };
   try {
@@ -87,14 +88,16 @@ export async function iniciar(entrada) {
   } catch (e) { await cred.user.delete().catch(() => null); throw e; }
   prov.id = uid;
   await enviarCorreo({ plantilla: 'proveedor', tipo: 'bienvenida', proveedorId: uid, folio, para: datos.correo, secreto: true,
-    asunto: 'Tu folio de registro ' + folio + ' · CESANTONI', titulo: 'Tu registro está en marcha',
-    parrafos: ['Hola ' + datos.contacto + ', ya tienes folio de proveedor. Con estos datos puedes continuar desde cualquier dispositivo; tu avance se guarda solo.'],
+    asunto: (esActual ? 'Tu folio de actualización ' : 'Tu folio de registro ') + folio + ' · CESANTONI', titulo: esActual ? 'Tu actualización está en marcha' : 'Tu registro está en marcha',
+    parrafos: [esActual
+      ? 'Hola ' + datos.contacto + ', gracias por actualizar tus datos y documentos para el directorio de proveedores de CESANTONI. Con este folio y clave puedes continuar desde cualquier dispositivo; tu avance se guarda solo.'
+      : 'Hola ' + datos.contacto + ', ya tienes folio de proveedor. Con estos datos puedes continuar desde cualquier dispositivo; tu avance se guarda solo.'],
     datos: [['Folio', folio], ['Clave de acceso', clave], ['Empresa', datos.razon_social]],
     boton: { texto: 'Continuar mi registro', url: portalUrl() }, nota: 'Si pierdes tu clave, en el portal elige «Olvidé mi clave».' });
-  await enviarCorreo({ plantilla: 'interno', tipo: 'inicio', proveedorId: uid, folio, para: await destinatarios('inicio'), etiqueta: 'NUEVO REGISTRO',
-    asunto: 'Alerta: nuevo registro iniciado ' + folio, titulo: datos.razon_social,
-    parrafos: ['Un proveedor generó su folio. Recibirás otra alerta cuando envíe el expediente completo.'],
-    datos: [['Contacto', datos.contacto], ['Correo', datos.correo], ['Teléfono', datos.telefono], ['País', datos.pais]],
+  await enviarCorreo({ plantilla: 'interno', tipo: 'inicio', proveedorId: uid, folio, para: await destinatarios('inicio'), etiqueta: esActual ? 'PROVEEDOR ACTUAL' : 'NUEVO REGISTRO',
+    asunto: (esActual ? 'Alerta: proveedor actual inició su actualización ' : 'Alerta: nuevo registro iniciado ') + folio, titulo: datos.razon_social,
+    parrafos: [(esActual ? 'Un proveedor con el que ya trabajamos generó su folio para actualizar sus datos.' : 'Un proveedor generó su folio.') + ' Recibirás otra alerta cuando envíe el expediente completo.'],
+    datos: [['Tipo', TIPOS_PROV[esActual ? 'actual' : 'nuevo']], ['Contacto', datos.contacto], ['Correo', datos.correo], ['Teléfono', datos.telefono], ['País', datos.pais]],
     boton: { texto: 'Ver en el panel', url: panelUrl() } });
   return { prov, clave };
 }
@@ -196,7 +199,7 @@ export async function enviar(prov) {
     asunto: (eraCorreccion ? 'Alerta: correcciones reenviadas ' : 'Alerta: registro completo para revisar ') + prov.folio,
     titulo: prov.razon_social,
     parrafos: [eraCorreccion ? 'El proveedor atendió las correcciones y reenvió su expediente.' : 'El proveedor llenó correctamente su registro y envió todos los documentos requeridos.'],
-    datos: [['Contacto', prov.contacto], ['Correo', prov.correo], ['Teléfono', prov.telefono], ['País', prov.pais], ['RFC / ID fiscal', d.rfc || '—'],
+    datos: [['Tipo', TIPOS_PROV[tipoDe(prov)]], ['Contacto', prov.contacto], ['Correo', prov.correo], ['Teléfono', prov.telefono], ['País', prov.pais], ['RFC / ID fiscal', d.rfc || '—'],
       ['Servicios', (d.servicios || []).join(', ')], ['Unidades', String(d.num_unidades || '—')], ['Envío número', String(envios)]],
     lista, boton: { texto: 'Revisar en el panel', url: panelUrl() } });
   return prov;
